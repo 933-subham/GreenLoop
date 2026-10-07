@@ -1,0 +1,403 @@
+/* ========================
+   EcoCity – Global CSS
+   ======================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+:root {
+  --eco-primary: #28a745;
+  --eco-primary-dark: #1e7e34;
+  --eco-primary-light: #d4edda;
+  --eco-accent: #20c997;
+  --eco-bg: #f8fafb;
+  --eco-white: #ffffff;
+  --eco-dark: #1a1d23;
+  --eco-text: #374151;
+  --eco-text-muted: #6b7280;
+  --eco-border: #e5e7eb;
+  --eco-shadow: 0 1px 3px rgba(0,0,0,.08), 0 1px 2px rgba(0,0,0,.06);
+  --eco-shadow-md: 0 4px 16px rgba(0,0,0,.1);
+  --eco-shadow-lg: 0 10px 40px rgba(0,0,0,.12);
+  --eco-radius: 12px;
+  --eco-radius-sm: 8px;
+  --eco-radius-lg: 20px;
+  --transition: all .22s ease;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--eco-bg);
+  color: var(--eco-text);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Utilities ── */
+.text-eco    { color: var(--eco-primary) !important; }
+.bg-eco      { background: var(--eco-primary) !important; }
+.border-eco  { border-color: var(--eco-primary) !important; }
+
+/* ── Buttons ── */
+.btn-eco {
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: #fff !important;
+  border: none;
+  font-weight: 600;
+  letter-spacing: .3px;
+  transition: var(--transition);
+  box-shadow: 0 4px 14px rgba(40,167,69,.35);
+}
+.btn-eco:hover {
+  background: linear-gradient(135deg, #1e7e34, #17a97a);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(40,167,69,.45);
+  color: #fff !important;
+}
+.btn-eco:active { transform: translateY(0); }
+
+.btn-eco-outline {
+  background: transparent;
+  color: var(--eco-primary) !important;
+  border: 2px solid var(--eco-primary) !important;
+  font-weight: 600;
+  transition: var(--transition);
+}
+.btn-eco-outline:hover {
+  background: var(--eco-primary-light) !important;
+  color: var(--eco-primary-dark) !important;
+}
+
+/* ── Cards ── */
+.eco-card {
+  background: var(--eco-white);
+  border: 1px solid var(--eco-border) !important;
+  border-radius: var(--eco-radius);
+  box-shadow: var(--eco-shadow);
+  transition: var(--transition);
+}
+.eco-card:hover { box-shadow: var(--eco-shadow-md); }
+.eco-card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--eco-shadow-lg);
+}
+
+/* ── Navbar ── */
+.eco-navbar {
+  background: rgba(255,255,255,.97) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--eco-border);
+  box-shadow: 0 1px 0 rgba(0,0,0,.06);
+  padding: .75rem 0;
+}
+.eco-navbar .nav-link {
+  font-weight: 500;
+  color: var(--eco-text) !important;
+  font-size: .92rem;
+  padding: .4rem .75rem !important;
+  border-radius: var(--eco-radius-sm);
+  transition: var(--transition);
+}
+.eco-navbar .nav-link:hover { background: var(--eco-primary-light); color: var(--eco-primary) !important; }
+
+/* ── Hero ── */
+.hero-section {
+  background: linear-gradient(160deg, #e8f5e9 0%, #f1f8e9 40%, #e0f7fa 100%);
+  min-height: 90vh;
+  display: flex;
+  align-items: center;
+  padding: 4rem 0;
+  position: relative;
+  overflow: hidden;
+}
+.hero-section::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(ellipse at 80% 50%, rgba(40,167,69,.07) 0%, transparent 70%);
+  pointer-events: none;
+}
+.hero-title {
+  font-size: clamp(2rem, 5vw, 3.25rem);
+  font-weight: 800;
+  line-height: 1.1;
+  letter-spacing: -.02em;
+  color: #111827;
+}
+.hero-canvas-wrapper {
+  background: linear-gradient(135deg, rgba(255,255,255,.9), rgba(232,255,240,.8));
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(40,167,69,.2);
+  border-radius: 24px;
+  box-shadow: 0 20px 60px rgba(40,167,69,.18), 0 4px 20px rgba(0,0,0,.08);
+  height: 480px;
+  position: relative;
+  overflow: hidden;
+}
+.hero-canvas-wrapper::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 24px;
+  border: 1px solid rgba(40,167,69,.15);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ── Sections ── */
+.section-badge {
+  display: inline-block;
+  background: var(--eco-primary-light);
+  color: var(--eco-primary-dark);
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  padding: .35rem 1rem;
+  border-radius: 20px;
+}
+.section-title {
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+  font-weight: 800;
+  color: #111827;
+  letter-spacing: -.02em;
+}
+
+/* How It Works steps */
+.step-number {
+  width: 52px; height: 52px;
+  background: linear-gradient(135deg, #28a745, #20c997);
+  color: white;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 1.1rem;
+  box-shadow: 0 4px 14px rgba(40,167,69,.35);
+  flex-shrink: 0;
+}
+
+/* Stat counter */
+.stat-card {
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--eco-white);
+  border-radius: var(--eco-radius);
+  border: 1px solid var(--eco-border);
+  transition: var(--transition);
+}
+.stat-card:hover { transform: translateY(-4px); box-shadow: var(--eco-shadow-lg); }
+.stat-number { font-size: 2.75rem; font-weight: 800; color: var(--eco-primary); line-height: 1; }
+.stat-label  { color: var(--eco-text-muted); font-size: .9rem; font-weight: 500; margin-top: .5rem; }
+
+/* Feature icons */
+.feature-icon-wrap {
+  width: 64px; height: 64px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 16px;
+  margin-bottom: 1.25rem;
+}
+
+/* ── Auth Pages ── */
+.auth-wrapper {
+  min-height: calc(100vh - 72px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  background: linear-gradient(160deg, #e8f5e9 0%, #f8fafb 60%);
+}
+.auth-card {
+  background: white;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px rgba(0,0,0,.1);
+  padding: 2.5rem;
+  width: 100%;
+  max-width: 440px;
+  border: 1px solid rgba(40,167,69,.12);
+}
+.auth-card .form-control,
+.auth-card .form-select {
+  border: 1.5px solid var(--eco-border);
+  border-radius: var(--eco-radius-sm);
+  padding: .75rem 1rem;
+  font-size: .95rem;
+  transition: var(--transition);
+  background: #fafafa;
+}
+.auth-card .form-control:focus,
+.auth-card .form-select:focus {
+  border-color: var(--eco-primary);
+  box-shadow: 0 0 0 3px rgba(40,167,69,.12);
+  background: #fff;
+}
+
+/* ── Sidebar + Dashboard layout ── */
+.dashboard-layout {
+  display: flex;
+  min-height: calc(100vh - 60px);
+}
+.eco-sidebar {
+  width: 240px;
+  background: white;
+  border-right: 1px solid var(--eco-border);
+  padding: 1.5rem 0;
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+.eco-sidebar .sidebar-label {
+  font-size: .7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  color: var(--eco-text-muted);
+  padding: 1rem 1.25rem .4rem;
+}
+.eco-sidebar a,
+.sidebar-nav-btn {
+  display: flex;
+  align-items: center;
+  gap: .75rem;
+  padding: .65rem 1.25rem;
+  font-weight: 500;
+  font-size: .9rem;
+  color: var(--eco-text-muted);
+  text-decoration: none;
+  border-radius: 0;
+  border: none;
+  border-left: 3px solid transparent;
+  background: transparent;
+  width: 100%;
+  transition: var(--transition);
+  margin: .1rem 0;
+  cursor: pointer;
+  text-align: left;
+}
+.eco-sidebar a:hover,
+.sidebar-nav-btn:hover { background: var(--eco-primary-light); color: var(--eco-primary); }
+.eco-sidebar a.active,
+.sidebar-nav-btn.active {
+  color: var(--eco-primary);
+  background: var(--eco-primary-light);
+  border-left-color: var(--eco-primary);
+  font-weight: 600;
+}
+.dashboard-content {
+  flex: 1;
+  padding: 2rem 2.5rem;
+  background: var(--eco-bg);
+  overflow-y: auto;
+}
+
+/* ── Mini Stat Cards ── */
+.kpi-card {
+  background: white;
+  border-radius: var(--eco-radius);
+  padding: 1.5rem;
+  border: 1px solid var(--eco-border);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  transition: var(--transition);
+}
+.kpi-card:hover { box-shadow: var(--eco-shadow-md); }
+.kpi-icon-wrap {
+  width: 52px; height: 52px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.kpi-value { font-size: 1.75rem; font-weight: 800; line-height: 1; }
+.kpi-label { font-size: .82rem; font-weight: 500; color: var(--eco-text-muted); margin-top: 2px; }
+
+/* ── Tables ── */
+.eco-table thead th {
+  background: #f9fafb;
+  font-size: .78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .8px;
+  color: var(--eco-text-muted);
+  border-bottom: 1px solid var(--eco-border);
+  padding: .9rem 1rem;
+}
+.eco-table tbody tr:hover { background: #f9fafb; }
+.eco-table td { padding: .9rem 1rem; vertical-align: middle; font-size: .9rem; }
+
+/* ── Status Badges ── */
+.badge-status {
+  display: inline-flex;
+  align-items: center;
+  gap: .3rem;
+  padding: .3rem .75rem;
+  border-radius: 20px;
+  font-size: .76rem;
+  font-weight: 600;
+}
+.badge-status::before {
+  content: '';
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.status-completed  { background: #d1fae5; color: #065f46; }
+.status-assigned   { background: #dbeafe; color: #1e40af; }
+.status-cleaning   { background: #fef3c7; color: #92400e; }
+.status-submitted  { background: #f3f4f6; color: #374151; }
+.status-pending    { background: #fff3cd; color: #856404; }
+.status-active     { background: #d1fae5; color: #065f46; }
+.status-blocked    { background: #fee2e2; color: #991b1b; }
+
+/* ── Upload zone ── */
+.upload-zone {
+  border: 2px dashed var(--eco-border);
+  border-radius: var(--eco-radius);
+  padding: 2.5rem 1.5rem;
+  text-align: center;
+  cursor: pointer;
+  transition: var(--transition);
+  background: #fafafa;
+}
+.upload-zone:hover, .upload-zone.drag-over {
+  border-color: var(--eco-primary);
+  background: var(--eco-primary-light);
+}
+
+/* ── Footer ── */
+.eco-footer {
+  background: #111827;
+  color: #9ca3af;
+}
+.eco-footer a { color: #9ca3af; text-decoration: none; transition: var(--transition); }
+.eco-footer a:hover { color: #28a745; }
+
+/* ── Alerts ── */
+.alert-eco { background: var(--eco-primary-light); border-color: var(--eco-primary); color: #155724; }
+
+/* ── Form improvements ── */
+.form-control, .form-select {
+  border-radius: var(--eco-radius-sm);
+  border: 1.5px solid var(--eco-border);
+  transition: var(--transition);
+}
+.form-control:focus, .form-select:focus {
+  border-color: var(--eco-primary);
+  box-shadow: 0 0 0 3px rgba(40,167,69,.12);
+}
+.form-label { font-weight: 500; font-size: .9rem; color: var(--eco-text); margin-bottom: .4rem; }
+
+/* ── Responsive ── */
+@media (max-width: 991px) {
+  .eco-sidebar    { display: none; }
+  .dashboard-content { padding: 1.25rem; }
+  .hero-canvas-wrapper { height: 320px; }
+}
+@media (max-width: 767px) {
+  .hero-title    { font-size: 1.9rem; }
+  .auth-card     { padding: 1.75rem 1.25rem; }
+  .stat-number   { font-size: 2rem; }
+  .hero-section  { padding: 2.5rem 0; min-height: auto; }
+}
