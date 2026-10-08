@@ -9,7 +9,8 @@
     "dev": "nodemon server.js",
     "create-admin": "node utils/createAdmin.js",
     "seed-cities": "node utils/seedCities.js",
-    "seed-shop": "node utils/seedShop.js"
+    "seed-shop": "node utils/seedShop.js",
+    "seed-greenloop": "node utils/seedGreenLoop.js"
   },
   "keywords": [],
   "author": "",

@@ -1,10 +1,12 @@
 {
-  "name": "smart-waste-management",
+  "name": "greenloop-facility-municipal-intelligence",
   "private": true,
-  "devDependencies": {
-    "firebase-tools": "^13.0.0"
-  },
-  "dependencies": {
-    "firebase": "^12.8.0"
+  "version": "2.5.0",
+  "scripts": {
+    "dev:org": "cd website1_org_webapp && npm run dev",
+    "dev:municipal": "cd website2_municipal_webapp && npm run dev",
+    "build:org": "cd website1_org_webapp && npm run build",
+    "build:municipal": "cd website2_municipal_webapp && npm run build",
+    "build:all": "npm run build:org && npm run build:municipal"
   }
 }

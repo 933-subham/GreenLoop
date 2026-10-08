@@ -13,6 +13,11 @@ import shopRoutes from './routes/shopRoutes.js';
 import partnerRoutes from './routes/partnerRoutes.js';
 import leaderboardRoutes from './routes/leaderboardRoutes.js';
 import chatbotRoutes from './routes/chatbotRoutes.js';
+import facilityRoutes from './routes/facilityRoutes.js';
+import analyticsRoutes from './routes/analyticsRoutes.js';
+import binRoutes from './routes/binRoutes.js';
+import actionRoutes from './routes/actionRoutes.js';
+import demoRoutes from './routes/demoRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -37,7 +42,20 @@ app.use('/api/partners', partnerRoutes);
 app.use('/api/leaderboard', leaderboardRoutes);
 app.use('/api/chatbot', chatbotRoutes);
 
-app.get('/api', (req, res) => res.json({ status: 'EcoCity API running 🌿', version: '2.0.0' }));
+// GreenLoop PS-4 Facility & Intelligence Routes
+app.use('/api/facility', facilityRoutes);
+app.use('/api/analytics', analyticsRoutes);
+app.use('/api/bins', binRoutes);
+app.use('/api/actions', actionRoutes);
+app.use('/api/demo', demoRoutes);
+
+// Serve Dual Portals (Website 1 & Website 2)
+app.use('/org', express.static(path.join(__dirname, '../website1_org_portal')));
+app.use('/municipal', express.static(path.join(__dirname, '../website2_municipal_portal')));
+app.get('/', (req, res) => res.redirect('/org'));
+
+app.get('/api', (req, res) => res.json({ status: 'GreenLoop PS-4 Facility Intelligence API running 🌿', version: '2.5.0' }));
+
 
 // Global error handler
 app.use((err, req, res, next) => {

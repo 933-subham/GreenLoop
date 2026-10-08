@@ -35,6 +35,7 @@ const MENUS = {
         label: 'Admin Panel',
         base: '/admin/dashboard',
         items: [
+            { tab: 'overview', icon: <LayoutDashboard size={18} />, label: 'Facility Intelligence' },
             { tab: 'analytics', icon: <Activity size={18} />, label: 'Analytics' },
             { tab: 'map', icon: <MapIcon size={18} />, label: 'Live Map' },
             { tab: 'false-reports', icon: <AlertTriangle size={18} />, label: 'False Reports' },

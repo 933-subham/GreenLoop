@@ -2,7 +2,8 @@ import express from 'express';
 import {
     createReport, getReports, getAvailableReports, getMyReports,
     assignReport, adminAssignReport, markCleaning, completeReport,
-    getMyTasks, getTaskHistory, checkDuplicate, getMapData, markFalseReport
+    getMyTasks, getTaskHistory, checkDuplicate, getMapData, markFalseReport,
+    createPublicStreetReport
 } from '../controllers/reportController.js';
 import { classifyWaste } from '../controllers/aiController.js';
 import { protect, authorizeRoles } from '../middleware/authMiddleware.js';
@@ -10,10 +11,14 @@ import { uploadReport, uploadProof } from '../middleware/uploadMiddleware.js';
 
 const router = express.Router();
 
+// Public Citizen Street Report (Outside Organization boundary - Zero Auth required)
+router.post('/public-street', uploadReport.single('image'), createPublicStreetReport);
+
 // Citizen
 router.post('/classify-waste', protect, authorizeRoles('citizen'), uploadReport.single('image'), classifyWaste);
 router.get('/check-duplicate', protect, authorizeRoles('citizen'), checkDuplicate);
 router.post('/', protect, authorizeRoles('citizen'), uploadReport.single('image'), createReport);
+
 router.get('/myreports', protect, authorizeRoles('citizen'), getMyReports);
 
 // Partner

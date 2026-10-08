@@ -5,6 +5,7 @@ import Sidebar from '../components/Sidebar';
 import LiveGarbageMap from '../components/LiveGarbageMap';
 import AnalyticsDashboard from '../components/AnalyticsDashboard';
 import Leaderboard from '../components/Leaderboard';
+import FacilityOverviewTab from '../components/FacilityOverviewTab';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
@@ -14,7 +15,7 @@ export default function AdminDashboard() {
     const { user, authAxios } = useAuth();
     const navigate = useNavigate();
     const [searchParams] = useSearchParams();
-    const activeTab = searchParams.get('tab') || 'partners';
+    const activeTab = searchParams.get('tab') || 'overview';
 
     const [stats, setStats] = useState({});
     const [pending, setPending] = useState([]);
@@ -210,6 +211,7 @@ export default function AdminDashboard() {
 
                 <Tab.Container activeKey={activeTab} onSelect={tab => navigate(`/admin/dashboard?tab=${tab}`)}>
                     <Nav variant="tabs" className="mb-3 border-bottom flex-wrap">
+                        <Nav.Item><Nav.Link eventKey="overview" className="d-flex align-items-center gap-1 fw-bold text-success"><Activity size={16} /> 🌿 Facility Intelligence</Nav.Link></Nav.Item>
                         <Nav.Item><Nav.Link eventKey="analytics" className="d-flex align-items-center gap-1"><Activity size={16} /> Analytics</Nav.Link></Nav.Item>
                         <Nav.Item><Nav.Link eventKey="map" className="d-flex align-items-center gap-1"><MapIcon size={16} /> Map & Hotspots</Nav.Link></Nav.Item>
                         <Nav.Item><Nav.Link eventKey="false-reports" className="d-flex align-items-center gap-1">🚩 False Reports {falseReports.length > 0 && <Badge bg="danger" className="ms-1">{falseReports.length}</Badge>}</Nav.Link></Nav.Item>
@@ -222,6 +224,11 @@ export default function AdminDashboard() {
                     </Nav>
 
                     <Tab.Content>
+                        {/* GREENLOOP PS-4 FACILITY INTELLIGENCE DASHBOARD */}
+                        <Tab.Pane eventKey="overview">
+                            <FacilityOverviewTab />
+                        </Tab.Pane>
+
                         {/* ANALYTICS DASHBOARD */}
                         <Tab.Pane eventKey="analytics">
                             <AnalyticsDashboard />

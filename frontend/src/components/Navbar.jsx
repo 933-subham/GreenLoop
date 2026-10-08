@@ -1,68 +1,109 @@
 import React from 'react';
-import { Navbar, Container, Nav, Button, Badge } from 'react-bootstrap';
-import { Link, useNavigate } from 'react-router-dom';
-import { Leaf, LogOut, User, LayoutDashboard } from 'lucide-react';
+import { Navbar, Container, Nav, Button, Badge, NavDropdown } from 'react-bootstrap';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Leaf, LogOut, User, LayoutDashboard, Sliders, Shield, Truck, Zap, HelpCircle, Activity } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useFacility, FACILITY_PRESETS } from '../context/FacilityContext';
 
-const ROLE_LABELS = { citizen: 'Citizen', partner: 'Partner', admin: 'Admin' };
-const ROLE_COLORS = { citizen: '#10b981', partner: '#3b82f6', admin: '#ef4444' };
-const ROLE_DASH = { citizen: '/citizen/dashboard', partner: '/partner/dashboard', admin: '/admin/dashboard' };
-
-const Navigation = () => {
+export default function Navigation() {
     const { user, logout } = useAuth();
+    const { activeFacilityId, activePreset, switchFacility } = useFacility();
     const navigate = useNavigate();
+    const location = useLocation();
 
     return (
-        <Navbar expand="lg" className="eco-navbar sticky-top">
-            <Container>
+        <Navbar expand="lg" className="eco-navbar sticky-top bg-white border-bottom shadow-sm py-2">
+            <Container fluid className="px-3 px-lg-4">
+                {/* Brand & Badge */}
                 <Navbar.Brand as={Link} to="/" className="d-flex align-items-center gap-2 text-decoration-none">
-                    <div style={{ background: 'linear-gradient(135deg,#28a745,#20c997)', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ background: 'linear-gradient(135deg,#10b981,#059669)', borderRadius: 10, width: 36, height: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         <Leaf size={20} color="white" />
                     </div>
-                    <span className="fw-bold fs-5 text-dark">EcoCity</span>
-                    <span className="d-none d-md-inline text-muted" style={{ fontSize: '0.7rem', fontWeight: 500, letterSpacing: '1px', borderLeft: '1px solid #dee2e6', paddingLeft: '0.5rem', marginLeft: '0.1rem' }}>
-                        SMART WASTE
-                    </span>
+                    <div>
+                        <span className="fw-bold fs-5 text-dark">GreenLoop</span>
+                        <span className="badge bg-success-subtle text-success ms-2 small fw-semibold" style={{ fontSize: '0.65rem' }}>
+                            PS-4 BPUT
+                        </span>
+                    </div>
                 </Navbar.Brand>
 
-                <Navbar.Toggle aria-controls="eco-nav" />
-                <Navbar.Collapse id="eco-nav" className="justify-content-end">
+                {/* Facility Template Switcher Dropdown (20% Marks Criterion) */}
+                <div className="d-flex align-items-center gap-1 mx-2">
+                    <NavDropdown
+                        title={<span className="small fw-bold text-dark">{activePreset?.badge || '🎓 College'}</span>}
+                        id="facility-switcher-dropdown"
+                        className="border rounded-pill px-2 py-1 bg-light shadow-sm"
+                    >
+                        <NavDropdown.Header className="small fw-bold text-muted">
+                            Switch Facility Profile (India-Specific Templates)
+                        </NavDropdown.Header>
+                        {FACILITY_PRESETS.map((p) => (
+                            <NavDropdown.Item
+                                key={p.id}
+                                active={p.id === activeFacilityId}
+                                onClick={() => switchFacility(p.id)}
+                                className="small d-flex align-items-center justify-content-between py-2"
+                            >
+                                <span>{p.badge}</span>
+                                <small className="text-muted ms-3">₹{p.tariff}/kWh</small>
+                            </NavDropdown.Item>
+                        ))}
+                    </NavDropdown>
+                </div>
+
+                <Navbar.Toggle aria-controls="greenloop-nav" />
+                <Navbar.Collapse id="greenloop-nav" className="justify-content-end">
                     <Nav className="align-items-center gap-1">
+                        {/* Portals & Role Views */}
+                        <Nav.Link as={Link} to="/org" className={`small fw-bold nav-link ${location.pathname.startsWith('/org') || location.pathname.startsWith('/admin') ? 'text-success' : 'text-dark'}`}>
+                            🏢 OrgPortal (Web 1)
+                        </Nav.Link>
+                        <Nav.Link as={Link} to="/municipality" className={`small fw-bold nav-link ${location.pathname === '/municipality' ? 'text-primary' : 'text-dark'}`}>
+                            🏛️ MunicipalPortal (Web 2)
+                        </Nav.Link>
+                        <Nav.Link as={Link} to="/warden" className={`small fw-semibold nav-link ${location.pathname === '/warden' ? 'text-warning-emphasis fw-bold' : ''}`}>
+                            🛡️ Warden Cockpit
+                        </Nav.Link>
+                        <Nav.Link as={Link} to="/driver" className={`small fw-semibold nav-link ${location.pathname === '/driver' ? 'text-info-emphasis fw-bold' : ''}`}>
+                            🚛 Driver Cockpit
+                        </Nav.Link>
+                        <Nav.Link as={Link} to="/sustainability" className={`small fw-semibold nav-link ${location.pathname === '/sustainability' ? 'text-success fw-bold' : ''}`}>
+                            🌱 Sustainability & AI
+                        </Nav.Link>
+                        <Nav.Link as={Link} to="/citizen/dashboard" className={`small fw-semibold nav-link ${location.pathname.startsWith('/citizen') ? 'text-success fw-bold' : ''}`}>
+                            👥 Student / Public
+                        </Nav.Link>
+
+                        
+                        {/* Live Fault Injection Control Panel */}
+                        <Link to="/demo" className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 fw-bold ms-1" style={{ fontSize: '0.8rem' }}>
+                            ⚡ Demo Console
+                        </Link>
+
+                        {/* User Profile / Auth */}
                         {!user ? (
-                            <>
-                                <Nav.Link as={Link} to="/#how-it-works" className="nav-link">How it Works</Nav.Link>
-                                <Nav.Link as={Link} to="/#features" className="nav-link">Features</Nav.Link>
-                                <Nav.Link as={Link} to="/login" className="nav-link">Login</Nav.Link>
-                                <Link to="/register" className="btn btn-eco px-4 py-2 rounded-3 fw-semibold ms-2" style={{ fontSize: '0.9rem' }}>
-                                    Register Free
-                                </Link>
-                            </>
+                            <Link to="/login" className="btn btn-success btn-sm rounded-pill px-3 py-1 fw-semibold ms-2" style={{ fontSize: '0.85rem' }}>
+                                Login
+                            </Link>
                         ) : (
-                            <>
-                                <div className="d-flex align-items-center gap-2 px-3 py-1 rounded-pill me-2"
-                                    style={{ background: '#f8f9fa', border: '1px solid #e9ecef' }}>
-                                    <div style={{ width: 28, height: 28, borderRadius: '50%', background: ROLE_COLORS[user.role] + '20', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                        <User size={14} color={ROLE_COLORS[user.role]} />
-                                    </div>
-                                    <span className="fw-semibold small text-dark">{user.name}</span>
-                                    <span className="badge rounded-pill text-white fw-semibold" style={{ background: ROLE_COLORS[user.role], fontSize: '0.68rem' }}>
-                                        {ROLE_LABELS[user.role]}
-                                    </span>
-                                </div>
-                                <Nav.Link as={Link} to={ROLE_DASH[user.role]} className="d-flex align-items-center gap-1 fw-medium nav-link">
-                                    <LayoutDashboard size={16} /> Dashboard
-                                </Nav.Link>
-                                <Button variant="light" size="sm" onClick={() => { logout(); navigate('/login'); }}
-                                    className="d-flex align-items-center gap-1 border fw-medium ms-1" style={{ fontSize: '0.85rem' }}>
-                                    <LogOut size={15} className="text-danger" /> Logout
+                            <div className="d-flex align-items-center gap-2 ms-2">
+                                <span className="badge bg-light text-dark border small fw-semibold px-2 py-1">
+                                    {user.name.split(' ')[0]} ({user.role})
+                                </span>
+                                <Button
+                                    variant="outline-secondary"
+                                    size="sm"
+                                    onClick={() => { logout(); navigate('/login'); }}
+                                    className="p-1 px-2 border-0"
+                                    title="Logout"
+                                >
+                                    <LogOut size={16} className="text-danger" />
                                 </Button>
-                            </>
+                            </div>
                         )}
                     </Nav>
                 </Navbar.Collapse>
             </Container>
         </Navbar>
     );
-};
-
-export default Navigation;
+}
