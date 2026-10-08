@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="https://api.iconify.design/lucide:building-2.svg?color=%2310b981" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>OrgPortal FacilityOS | Estate & Facility Intelligence Platform</title>
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Play CDN with full custom configuration -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: 'class',
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['"Plus Jakarta Sans"', 'system-ui', '-apple-system', 'sans-serif'],
+              mono: ['"JetBrains Mono"', 'monospace'],
+            },
+            colors: {
+              slate: {
+                950: '#020617',
+                900: '#0f172a',
+                850: '#131d31',
+                800: '#1e293b',
+                750: '#283548',
+                700: '#334155',
+                600: '#475569',
+                500: '#64748b',
+                400: '#94a3b8',
+                300: '#cbd5e1',
+                200: '#e2e8f0',
+                100: '#f1f5f9',
+                50: '#f8fafc',
+              },
+              emerald: {
+                950: '#022c22',
+                900: '#064e3b',
+                800: '#065f46',
+                700: '#047857',
+                600: '#059669',
+                500: '#10b981',
+                400: '#34d399',
+                300: '#6ee7b7',
+                200: '#a7f3d0',
+                100: '#d1fae5',
+                50: '#ecfdf5',
+              }
+            }
+          }
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-slate-950 text-slate-100 antialiased font-sans min-h-screen selection:bg-emerald-500 selection:text-slate-950">
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>
