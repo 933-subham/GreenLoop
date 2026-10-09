@@ -49,9 +49,11 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
     const [latestSource, setLatestSource] = useState('live');
 
     // Donut Mix state
-    const [mixPeriod, setMixPeriod] = useState('today');
+    const [mixPeriod, setMixPeriod] = useState('24hr'); // '3hr' | '24hr' | '3d'
     const [mixData, setMixData] = useState([]);
-    const [hoveredSlice, setHoveredSlice] = useState(null);
+
+    // Campus 24-hr telemetry view mode: aggregate (actual vs baseline +/-15% envelope) vs breakdown
+    const [campusViewMode, setCampusViewMode] = useState('aggregate'); // 'aggregate' | 'breakdown'
 
     // ── Fetch Overview Data ───────────────────────────────────────────────────
     const fetchOverview = useCallback(async () => {
@@ -424,25 +426,17 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                         {overviewBars.map((bar, i) => {
                             const statusBadge = getStatusBadge(bar.status, bar.percentAbove, bar.openAlerts);
                             const isWater = activeTab === 'water';
-                            const isHighlighted = hoveredSlice !== null && mixData[hoveredSlice]?.name === bar.label;
 
                             return (
                                 <div
                                     key={bar.id || i}
                                     onClick={() => handleBarClick(bar)}
-                                    onMouseEnter={() => {
-                                        const idx = mixData.findIndex(m => m.name === bar.label || bar.label?.includes(m.name));
-                                        if (idx !== -1) setHoveredSlice(idx);
-                                    }}
-                                    onMouseLeave={() => setHoveredSlice(null)}
-                                    className={`bg-slate-950 border rounded-xl p-3.5 transition-all cursor-pointer relative overflow-hidden group ${
-                                        isHighlighted ? 'ring-2 ring-emerald-400 border-emerald-400 shadow-lg' : ''
-                                    } ${
+                                    className={`bg-slate-950 border rounded-xl p-3.5 transition-all duration-150 cursor-pointer relative overflow-hidden group hover:border-slate-600 hover:bg-slate-900/80 ${
                                         bar.status === 'red' || bar.openAlerts > 0
-                                            ? 'border-red-500/50 hover:border-red-400 bg-red-950/10'
+                                            ? 'border-red-500/50 bg-red-950/10'
                                             : bar.status === 'amber'
-                                            ? 'border-amber-500/50 hover:border-amber-400 bg-amber-950/10'
-                                            : 'border-slate-800 hover:border-slate-600'
+                                            ? 'border-amber-500/50 bg-amber-950/10'
+                                            : 'border-slate-800'
                                     }`}
                                 >
                                     {/* Top info */}
@@ -471,6 +465,32 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                                             exp: {bar.expected}
                                         </div>
                                     </div>
+
+                                    {/* Power Consumption Progress Bar */}
+                                    {!isWater && (
+                                        <div className="mt-2.5">
+                                            <div className="w-full bg-slate-800 rounded-full h-2 overflow-hidden border border-slate-700 relative">
+                                                <div
+                                                    className={`h-full transition-all duration-300 ${
+                                                        bar.status === 'red' || bar.openAlerts > 0
+                                                            ? 'bg-red-500'
+                                                            : bar.status === 'amber'
+                                                            ? 'bg-amber-400'
+                                                            : 'bg-emerald-400'
+                                                    }`}
+                                                    style={{
+                                                        width: `${Math.min(100, bar.expected > 0 ? Math.round((bar.value / (bar.expected * 1.35)) * 100) : 50)}%`
+                                                    }}
+                                                />
+                                            </div>
+                                            <div className="flex justify-between text-[10px] font-mono text-slate-400 mt-1">
+                                                <span>Load: {bar.value} kW</span>
+                                                <span className={bar.percentAbove > 0 ? 'text-amber-400' : 'text-emerald-400'}>
+                                                    {bar.percentAbove > 0 ? `+${bar.percentAbove}% above baseline` : 'Within baseline'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Water tank liquid gauge bar */}
                                     {isWater && bar.tankLevelPct != null && (
@@ -524,9 +544,9 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                             </p>
                         </div>
 
-                        {/* Period Switcher [ Today | 24h | 3d ] */}
+                        {/* Period Switcher [ 3hr | 24hr | 3d ] */}
                         <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-[10px] font-mono">
-                            {['today', '24h', '3d'].map((p) => (
+                            {['3hr', '24hr', '3d'].map((p) => (
                                 <button
                                     key={p}
                                     onClick={() => setMixPeriod(p)}
@@ -558,19 +578,17 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                                     outerRadius={80}
                                     paddingAngle={3}
                                     onClick={(entry) => {
-                                        const matched = overviewBars.find(b => b.label === entry.name || entry.name.includes(b.label) || b.label.includes(entry.name));
+                                        const matched = overviewBars.find(b => b.label === entry.name || entry.name?.includes(b.label) || b.label?.includes(entry.name));
                                         if (matched) handleBarClick(matched);
                                     }}
-                                    onMouseEnter={(_, idx) => setHoveredSlice(idx)}
-                                    onMouseLeave={() => setHoveredSlice(null)}
                                 >
                                     {mixData.map((entry, index) => (
                                         <Cell
                                             key={`cell-${index}`}
                                             fill={entry.color || '#10b981'}
-                                            stroke={hoveredSlice === index ? '#fff' : '#0f172a'}
-                                            strokeWidth={hoveredSlice === index ? 2 : 1}
-                                            style={{ cursor: 'pointer', transition: 'all 0.2s' }}
+                                            stroke="#0f172a"
+                                            strokeWidth={1}
+                                            style={{ cursor: 'pointer' }}
                                         />
                                     ))}
                                 </Pie>
@@ -594,14 +612,10 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                             <div
                                 key={idx}
                                 onClick={() => {
-                                    const matched = overviewBars.find(b => b.label === item.name || item.name.includes(b.label) || b.label.includes(item.name));
+                                    const matched = overviewBars.find(b => b.label === item.name || item.name?.includes(b.label) || b.label?.includes(item.name));
                                     if (matched) handleBarClick(matched);
                                 }}
-                                onMouseEnter={() => setHoveredSlice(idx)}
-                                onMouseLeave={() => setHoveredSlice(null)}
-                                className={`flex items-center justify-between text-[11px] font-mono p-1 rounded cursor-pointer transition-colors ${
-                                    hoveredSlice === idx ? 'bg-slate-800 text-white' : 'text-slate-300 hover:bg-slate-800/60'
-                                }`}
+                                className="flex items-center justify-between text-[11px] font-mono p-1 rounded cursor-pointer transition-colors text-slate-300 hover:bg-slate-800/60"
                             >
                                 <div className="flex items-center gap-1.5 truncate mr-2">
                                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: item.color }} />
@@ -621,23 +635,53 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                             <Activity className="w-4 h-4 text-cyan-400" />
                             24-Hour Continuous Telemetry (
-                            {level === 'campus' && 'Campus Aggregate'}
+                            {level === 'campus' && (campusViewMode === 'aggregate' ? 'Campus Aggregate' : 'Campus Building Breakdown')}
                             {level === 'building' && `${selectedBuilding?.label || 'Building'} – Multi-Floor Loads`}
                             {level === 'floor' && `${selectedBuilding?.label || 'Building'} Floor ${selectedFloor} Actual vs Expected Band`}
                             )
                         </h3>
                         <p className="text-xs text-slate-400 font-mono mt-0.5">
                             {activeTab === 'power'
-                                ? '5-minute resolution · Expected baseline ±15% envelope · Outlier anomaly spikes'
+                                ? (level === 'campus' && campusViewMode === 'aggregate'
+                                    ? '5-minute resolution · Expected baseline ±15% envelope · Outlier anomaly spikes'
+                                    : '5-minute continuous series · Individual sub-meter load curves')
                                 : 'Tank level % and continuous flow L/min · Shaded 01:00-04:00 night window'}
                         </p>
                     </div>
 
-                    {profileData?.deviceId && (
-                        <div className="text-xs font-mono bg-slate-800 border border-slate-700 px-3 py-1 rounded-lg text-emerald-400 font-bold">
-                            Sensor ID: {profileData.deviceId}
-                        </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                        {/* Campus view mode toggle: Aggregate vs Building Breakdown */}
+                        {level === 'campus' && activeTab === 'power' && (
+                            <div className="flex items-center bg-slate-950 border border-slate-800 rounded-lg p-0.5 text-[11px] font-mono">
+                                <button
+                                    onClick={() => setCampusViewMode('aggregate')}
+                                    className={`px-2.5 py-1 rounded font-bold transition-all ${
+                                        campusViewMode === 'aggregate'
+                                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                            : 'text-slate-400 hover:text-slate-200'
+                                    }`}
+                                >
+                                    Campus Aggregate (±15% Envelope)
+                                </button>
+                                <button
+                                    onClick={() => setCampusViewMode('breakdown')}
+                                    className={`px-2.5 py-1 rounded font-bold transition-all ${
+                                        campusViewMode === 'breakdown'
+                                            ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                            : 'text-slate-400 hover:text-slate-200'
+                                    }`}
+                                >
+                                    Building Breakdown
+                                </button>
+                            </div>
+                        )}
+
+                        {profileData?.deviceId && (
+                            <div className="text-xs font-mono bg-slate-800 border border-slate-700 px-3 py-1 rounded-lg text-emerald-400 font-bold">
+                                Sensor ID: {profileData.deviceId}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 <div className="h-72 w-full">
@@ -649,11 +693,12 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                                 <YAxis tick={AXIS_STYLE} stroke="#1e293b" unit=" kW" />
                                 <Tooltip
                                     contentStyle={TOOLTIP_STYLE}
-                                    formatter={(v, n) => [`${v} kW`, n]}
-                                    labelFormatter={(label) => `Time: ${label} (Sensor: ${profileData?.deviceId || 'PWR'})`}
+                                    formatter={(v, n) => [`${typeof v === 'number' ? v.toFixed(1) : v} kW`, n]}
+                                    labelFormatter={(label) => `Time: ${label}`}
                                 />
                                 <Legend wrapperStyle={{ fontSize: 11 }} />
 
+                                {/* 1. Floor Level: Actual vs Expected Baseline & ±15% Envelope */}
                                 {level === 'floor' && (
                                     <>
                                         <Area
@@ -677,7 +722,16 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                                         <Area
                                             type="monotone"
                                             dataKey="expectedMax"
-                                            name="Expected Upper (+15%)"
+                                            name="Upper Threshold (+15%)"
+                                            stroke="#f59e0b"
+                                            strokeWidth={1.2}
+                                            strokeDasharray="2 2"
+                                            fillOpacity={0}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="expectedMin"
+                                            name="Lower Threshold (-15%)"
                                             stroke="#64748b"
                                             strokeWidth={1}
                                             strokeDasharray="2 2"
@@ -686,23 +740,69 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                                     </>
                                 )}
 
+                                {/* 2. Building Level: Building Total vs Floors F1-F4 */}
                                 {level === 'building' && (
                                     <>
-                                        <Area type="monotone" dataKey="total" name="Building Total (kW)" stroke="#38bdf8" strokeWidth={2} fillOpacity={0.05} />
+                                        <Area type="monotone" dataKey="total" name="Building Actual (kW)" stroke="#38bdf8" strokeWidth={2.2} fill="#38bdf8" fillOpacity={0.08} />
+                                        <Area type="monotone" dataKey="baseline" name="Expected Baseline (kW)" stroke="#10b981" strokeWidth={1.8} strokeDasharray="4 4" fillOpacity={0} />
                                         <Area type="monotone" dataKey="F1" name="Floor 1 (kW)" stroke="#34d399" strokeWidth={1.5} fillOpacity={0} />
                                         <Area type="monotone" dataKey="F2" name="Floor 2 (kW)" stroke="#a78bfa" strokeWidth={1.5} fillOpacity={0} />
                                         <Area type="monotone" dataKey="F3" name="Floor 3 (kW)" stroke="#fbbf24" strokeWidth={1.5} fillOpacity={0} />
-                                        <Area type="monotone" dataKey="F4" name="Floor 4 (kW)" stroke="#f87171" strokeWidth={1.5} fillOpacity={0} />
+                                        <Area type="monotone" dataKey="F4" name="Floor 4 (kW)" stroke="#f87171" strokeWidth={1.8} fillOpacity={0} />
                                     </>
                                 )}
 
-                                {level === 'campus' && (
+                                {/* 3. Campus Level: Aggregate Mode (Actual vs Expected ±15% Envelope) */}
+                                {level === 'campus' && campusViewMode === 'aggregate' && (
                                     <>
-                                        <Area type="monotone" dataKey="total" name="Campus Total (kW)" stroke="#10b981" strokeWidth={2.5} fillOpacity={0.1} />
-                                        <Area type="monotone" dataKey="HA" name="Hostel A (kW)" stroke="#38bdf8" strokeWidth={1.5} fillOpacity={0} />
-                                        <Area type="monotone" dataKey="HB" name="Hostel B (kW)" stroke="#a78bfa" strokeWidth={1.5} fillOpacity={0} />
-                                        <Area type="monotone" dataKey="ACAD" name="Academic (kW)" stroke="#fbbf24" strokeWidth={1.5} fillOpacity={0} />
-                                        <Area type="monotone" dataKey="CANT" name="Canteen (kW)" stroke="#f472b6" strokeWidth={1.5} fillOpacity={0} />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="total"
+                                            name="Actual Campus Load (kW)"
+                                            stroke="#38bdf8"
+                                            strokeWidth={2.5}
+                                            fill="#38bdf8"
+                                            fillOpacity={0.12}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="baseline"
+                                            name="Expected Baseline (kW)"
+                                            stroke="#10b981"
+                                            strokeWidth={2}
+                                            strokeDasharray="4 4"
+                                            fillOpacity={0}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="expectedMax"
+                                            name="Upper Envelope (+15%)"
+                                            stroke="#f59e0b"
+                                            strokeWidth={1.2}
+                                            strokeDasharray="3 3"
+                                            fillOpacity={0}
+                                        />
+                                        <Area
+                                            type="monotone"
+                                            dataKey="expectedMin"
+                                            name="Lower Envelope (-15%)"
+                                            stroke="#64748b"
+                                            strokeWidth={1}
+                                            strokeDasharray="3 3"
+                                            fillOpacity={0}
+                                        />
+                                    </>
+                                )}
+
+                                {/* 4. Campus Level: Building Breakdown Mode (NO total, NO duplicate labels) */}
+                                {level === 'campus' && campusViewMode === 'breakdown' && (
+                                    <>
+                                        <Area type="monotone" dataKey="HA" name="Hostel Block A (kW)" stroke="#38bdf8" strokeWidth={1.8} fillOpacity={0.05} />
+                                        <Area type="monotone" dataKey="HB" name="Hostel Block B (kW)" stroke="#a78bfa" strokeWidth={1.8} fillOpacity={0.05} />
+                                        <Area type="monotone" dataKey="AB" name="Academic Block (kW)" stroke="#fbbf24" strokeWidth={1.8} fillOpacity={0.05} />
+                                        <Area type="monotone" dataKey="CANT" name="Canteen & Mess (kW)" stroke="#f472b6" strokeWidth={1.5} fillOpacity={0.05} />
+                                        <Area type="monotone" dataKey="PH" name="Pump House (kW)" stroke="#06b6d4" strokeWidth={1.5} fillOpacity={0.05} />
+                                        <Area type="monotone" dataKey="SL" name="Street Lighting (kW)" stroke="#84cc16" strokeWidth={1.5} fillOpacity={0.05} />
                                     </>
                                 )}
                             </AreaChart>

@@ -4,10 +4,11 @@ import {
     AlertTriangle, RefreshCw, Plus, Bell, Wrench, Truck, Activity,
     Sliders, Award, Eye, MapPin, Wind, Thermometer,
     Clock, Check, Sparkles, BookOpen, Info, Database, User,
-    LayoutDashboard, ChevronRight, Menu, Radio
+    LayoutDashboard, ChevronRight, Menu, Radio, BarChart3,
+    Search, Filter, X
 } from 'lucide-react';
 import {
-    ResponsiveContainer, AreaChart, Area,
+    ResponsiveContainer, AreaChart, Area, BarChart, Bar, Line,
     XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, Legend
 } from 'recharts';
 import axios from 'axios';
@@ -23,7 +24,6 @@ const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 // ─── Sidebar nav config ───────────────────────────────────────────────────────
 const NAV_ITEMS = [
     { id: 'overview',      label: 'Dashboard',        icon: LayoutDashboard },
-    { id: 'power_water',   label: 'Power & Water',    icon: Zap },
     { id: 'devices',       label: 'Devices & Logs',   icon: Database },
     { id: 'setup',         label: 'Facility Setup',   icon: Sliders },
     { id: 'waste',         label: 'Waste & Camera',   icon: Trash2 },
@@ -164,6 +164,9 @@ export default function OrgPortalApp() {
     // ── Live Backend Sensor State & Registry ──────────────────────────────────
     const [devices, setDevices] = useState([]);
     const [activeAlerts, setActiveAlerts] = useState([]);
+    const [devFilterSearch, setDevFilterSearch] = useState('');
+    const [devFilterType, setDevFilterType] = useState('all'); // 'all' | 'power' | 'water'
+    const [devFilterStatus, setDevFilterStatus] = useState('all'); // 'all' | 'online' | 'offline'
     const [powerSeries, setPowerSeries] = useState(DEFAULT_NORMAL_POWER);
     const [waterSeries, setWaterSeries] = useState(DEFAULT_NORMAL_WATER);
 
@@ -573,7 +576,9 @@ export default function OrgPortalApp() {
                                     icon={Zap}
                                     iconColor="text-amber-400"
                                     source={floor4Source}
-                                    onClick={() => setCurrentTab('power')}
+                                    onClick={() => {
+                                        showToast('⚡ Hostel Floor 4 (PWR-F4): Telemetry monitored below');
+                                    }}
                                 />
                                 <KpiCard
                                     label="Overhead Tank A"
@@ -585,7 +590,9 @@ export default function OrgPortalApp() {
                                     icon={Droplet}
                                     iconColor="text-cyan-400"
                                     source={tankASource}
-                                    onClick={() => setCurrentTab('water')}
+                                    onClick={() => {
+                                        showToast('💧 Overhead Tank A (WTR-TA): Telemetry monitored below');
+                                    }}
                                 />
                                 <KpiCard
                                     label="Ambient Air (CPCB)"
@@ -701,66 +708,8 @@ export default function OrgPortalApp() {
                                 </div>
                             </Card>
 
-                            {/* Charts Row */}
-                            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16 }}>
-                                <Card className="p-5">
-                                    <SectionHeader
-                                        icon={Zap}
-                                        title="24-Hour Multi-Floor Power Load Profile"
-                                        subtitle="Hostel meters PWR-F1 to PWR-F4 vs Expected Baseline"
-                                        action={
-                                            <span style={{ fontSize: 11, color: '#94a3b8', fontFamily: 'monospace', background: '#020617', padding: '3px 8px', borderRadius: 6, border: '1px solid #1e293b' }}>
-                                                Source: {floor4Source}
-                                            </span>
-                                        }
-                                    />
-                                    <div style={{ height: 260 }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <AreaChart data={powerSeries}>
-                                                <defs>
-                                                    <linearGradient id="gF4" x1="0" y1="0" x2="0" y2="1">
-                                                        <stop offset="5%" stopColor={floor4Alert ? '#ef4444' : '#10b981'} stopOpacity={0.4} />
-                                                        <stop offset="95%" stopColor={floor4Alert ? '#ef4444' : '#10b981'} stopOpacity={0} />
-                                                    </linearGradient>
-                                                </defs>
-                                                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-                                                <XAxis dataKey="h" tick={AXIS_STYLE} stroke="#1e293b" />
-                                                <YAxis tick={AXIS_STYLE} stroke="#1e293b" unit=" kW" />
-                                                <Tooltip contentStyle={TOOLTIP_STYLE} formatter={(val, name) => [`${val} kW`, name]} />
-                                                <Legend wrapperStyle={{ fontSize: 11 }} />
-                                                <Area type="monotone" dataKey="F4" name="Floor 4 · PWR-F4 (Actual)" stroke={floor4Alert ? '#ef4444' : '#10b981'} strokeWidth={2.5} fill="url(#gF4)" />
-                                                <Area type="monotone" dataKey="expF4" name="Floor 4 Expected Baseline" stroke="#64748b" strokeDasharray="4 4" strokeWidth={1.5} fillOpacity={0} />
-                                                <Area type="monotone" dataKey="F1" name="Floor 1 · PWR-F1" stroke="#06b6d4" strokeWidth={1.5} fillOpacity={0} />
-                                            </AreaChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                </Card>
-
-                                <Card className="p-5">
-                                    <SectionHeader title="Campus Energy Mix" subtitle="End-use distribution" />
-                                    <div style={{ height: 180 }}>
-                                        <ResponsiveContainer width="100%" height="100%">
-                                            <PieChart>
-                                                <Pie data={energyMix} cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={4} dataKey="value">
-                                                    {energyMix.map((e, i) => <Cell key={i} fill={e.color} />)}
-                                                </Pie>
-                                                <Tooltip contentStyle={TOOLTIP_STYLE} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    </div>
-                                    <div style={{ marginTop: 10 }}>
-                                        {energyMix.map((e, i) => (
-                                            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: '#94a3b8', padding: '2px 0', fontFamily: 'monospace' }}>
-                                                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: e.color, display: 'inline-block' }} />
-                                                    {e.name}
-                                                </span>
-                                                <strong style={{ color: '#f1f5f9' }}>{e.value}%</strong>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            </div>
+                            {/* ── POWER & WATER SCADA MONITORING (EMBEDDED ON DASHBOARD) ── */}
+                            <PowerWaterMonitoring orgId={authOrg.id} userRole={userRole} />
 
                             {/* ── DEVICE REGISTRY TABLE (Requirement 2 & 7) ─────────────── */}
                             <Card className="p-5">
@@ -774,6 +723,107 @@ export default function OrgPortalApp() {
                                         </button>
                                     }
                                 />
+
+                                {/* Sensor Filters: Search, Type, Status */}
+                                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16, padding: '12px 14px', background: '#020617', border: '1px solid #1e293b', borderRadius: 12 }}>
+                                    {/* Search Input */}
+                                    <div style={{ position: 'relative', flex: '1 1 240px', minWidth: 200 }}>
+                                        <Search size={14} style={{ position: 'absolute', left: 10, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+                                        <input
+                                            type="text"
+                                            value={devFilterSearch}
+                                            onChange={e => setDevFilterSearch(e.target.value)}
+                                            placeholder="Search sensor ID (e.g. PWR-F4), zone, or label..."
+                                            style={{ width: '100%', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: '7px 32px 7px 30px', color: '#fff', fontSize: 12, fontFamily: 'monospace', outline: 'none', boxSizing: 'border-box' }}
+                                        />
+                                        {devFilterSearch && (
+                                            <button
+                                                onClick={() => setDevFilterSearch('')}
+                                                style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: 2 }}
+                                            >
+                                                <X size={13} />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Filter Buttons */}
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8 }}>
+                                        {/* Type Filter */}
+                                        <div style={{ display: 'flex', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: 2, fontSize: 11, fontFamily: 'monospace' }}>
+                                            {[
+                                                { id: 'all', label: 'All Types' },
+                                                { id: 'power', label: '⚡ Power' },
+                                                { id: 'water', label: '💧 Water' }
+                                            ].map(t => (
+                                                <button
+                                                    key={t.id}
+                                                    onClick={() => setDevFilterType(t.id)}
+                                                    style={{
+                                                        padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                                                        background: devFilterType === t.id ? '#1e293b' : 'transparent',
+                                                        color: devFilterType === t.id ? '#34d399' : '#94a3b8',
+                                                        fontWeight: devFilterType === t.id ? 700 : 400
+                                                    }}
+                                                >
+                                                    {t.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Status Filter */}
+                                        <div style={{ display: 'flex', background: '#0f172a', border: '1px solid #1e293b', borderRadius: 8, padding: 2, fontSize: 11, fontFamily: 'monospace' }}>
+                                            {[
+                                                { id: 'all', label: 'All Status' },
+                                                { id: 'online', label: '● Online' },
+                                                { id: 'offline', label: '○ Offline' }
+                                            ].map(s => (
+                                                <button
+                                                    key={s.id}
+                                                    onClick={() => setDevFilterStatus(s.id)}
+                                                    style={{
+                                                        padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                                                        background: devFilterStatus === s.id ? '#1e293b' : 'transparent',
+                                                        color: devFilterStatus === s.id ? '#34d399' : '#94a3b8',
+                                                        fontWeight: devFilterStatus === s.id ? 700 : 400
+                                                    }}
+                                                >
+                                                    {s.label}
+                                                </button>
+                                            ))}
+                                        </div>
+
+                                        {/* Clear Button */}
+                                        {(devFilterSearch || devFilterType !== 'all' || devFilterStatus !== 'all') && (
+                                            <button
+                                                onClick={() => { setDevFilterSearch(''); setDevFilterType('all'); setDevFilterStatus('all'); }}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 4, background: '#1e293b', border: '1px solid #334155', color: '#f87171', padding: '5px 10px', borderRadius: 8, fontSize: 11, fontFamily: 'monospace', cursor: 'pointer' }}
+                                            >
+                                                <X size={12} /> Clear
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* Result Counter */}
+                                    <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
+                                        Showing <strong style={{ color: '#fff' }}>{devices.filter(d => {
+                                            if (devFilterType !== 'all') {
+                                                const isWater = d.type?.includes('water');
+                                                if (devFilterType === 'power' && d.type !== 'power') return false;
+                                                if (devFilterType === 'water' && !isWater) return false;
+                                            }
+                                            if (devFilterStatus !== 'all' && d.status !== devFilterStatus) return false;
+                                            if (devFilterSearch.trim()) {
+                                                const q = devFilterSearch.toLowerCase();
+                                                const mId = d.deviceId?.toLowerCase().includes(q);
+                                                const mZone = d.zone?.toLowerCase().includes(q);
+                                                const mLabel = d.label?.toLowerCase().includes(q);
+                                                if (!mId && !mZone && !mLabel) return false;
+                                            }
+                                            return true;
+                                        }).length}</strong> of {devices.length} sensors
+                                    </div>
+                                </div>
+
                                 <div style={{ overflowX: 'auto' }}>
                                     <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12, fontFamily: 'monospace' }}>
                                         <thead>
@@ -784,36 +834,75 @@ export default function OrgPortalApp() {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {devices.length > 0 ? devices.map(d => (
-                                                <tr key={d.deviceId} style={{ borderBottom: '1px solid #1e293b' }}>
-                                                    <td style={{ padding: '10px 12px', fontWeight: 700, color: '#34d399' }}>{d.deviceId}</td>
-                                                    <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>{d.zone} <small style={{ color: '#64748b' }}>({d.label})</small></td>
-                                                    <td style={{ padding: '10px 12px' }}>
-                                                        <span style={{ textTransform: 'uppercase', fontSize: 10, color: d.type === 'power' ? '#fbbf24' : '#67e8f9', background: '#020617', padding: '2px 6px', borderRadius: 4, border: '1px solid #1e293b' }}>
-                                                            {d.type}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '10px 12px', color: '#94a3b8' }}>
-                                                        {d.lastSeen ? new Date(d.lastSeen).toLocaleTimeString() : 'Never'}
-                                                    </td>
-                                                    <td style={{ padding: '10px 12px' }}>
-                                                        <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, background: d.status === 'online' ? '#064e3b' : '#1e293b', color: d.status === 'online' ? '#34d399' : '#64748b' }}>
-                                                            ● {d.status === 'online' ? 'Online' : 'Offline'}
-                                                        </span>
-                                                    </td>
-                                                    <td style={{ padding: '10px 12px', color: '#fff' }}>
-                                                        {d.deviceId === 'PWR-F4' ? `${floor4Power.toFixed(1)} kW` :
-                                                         d.deviceId === 'WTR-TA' ? `${tankALevel.toFixed(1)}%` :
-                                                         d.type === 'power' ? '12.0 kW' : '82.0%'}
-                                                    </td>
-                                                </tr>
-                                            )) : (
-                                                <tr>
-                                                    <td colSpan={6} style={{ padding: 16, textAlign: 'center', color: '#64748b' }}>
-                                                        Loading Device Registry… (PWR-F1..F4, PWR-ACAD, WTR-TA, WTR-TB)
-                                                    </td>
-                                                </tr>
-                                            )}
+                                            {(() => {
+                                                const filtered = devices.filter(d => {
+                                                    if (devFilterType !== 'all') {
+                                                        const isWater = d.type?.includes('water');
+                                                        if (devFilterType === 'power' && d.type !== 'power') return false;
+                                                        if (devFilterType === 'water' && !isWater) return false;
+                                                    }
+                                                    if (devFilterStatus !== 'all' && d.status !== devFilterStatus) return false;
+                                                    if (devFilterSearch.trim()) {
+                                                        const q = devFilterSearch.toLowerCase();
+                                                        const mId = d.deviceId?.toLowerCase().includes(q);
+                                                        const mZone = d.zone?.toLowerCase().includes(q);
+                                                        const mLabel = d.label?.toLowerCase().includes(q);
+                                                        if (!mId && !mZone && !mLabel) return false;
+                                                    }
+                                                    return true;
+                                                });
+
+                                                if (devices.length === 0) {
+                                                    return (
+                                                        <tr>
+                                                            <td colSpan={6} style={{ padding: 16, textAlign: 'center', color: '#64748b' }}>
+                                                                Loading Device Registry… (PWR-F1..F4, PWR-ACAD, WTR-TA, WTR-TB)
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+
+                                                if (filtered.length === 0) {
+                                                    return (
+                                                        <tr>
+                                                            <td colSpan={6} style={{ padding: 24, textAlign: 'center', color: '#94a3b8' }}>
+                                                                <div style={{ marginBottom: 8, color: '#f59e0b' }}>⚠️ No sensors match the selected filter criteria.</div>
+                                                                <button
+                                                                    onClick={() => { setDevFilterSearch(''); setDevFilterType('all'); setDevFilterStatus('all'); }}
+                                                                    style={{ background: '#1e293b', border: '1px solid #334155', color: '#38bdf8', padding: '6px 14px', borderRadius: 8, fontSize: 11, cursor: 'pointer' }}
+                                                                >
+                                                                    Clear Filters
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                }
+
+                                                return filtered.map(d => (
+                                                    <tr key={d.deviceId} style={{ borderBottom: '1px solid #1e293b' }}>
+                                                        <td style={{ padding: '10px 12px', fontWeight: 700, color: '#34d399' }}>{d.deviceId}</td>
+                                                        <td style={{ padding: '10px 12px', color: '#e2e8f0' }}>{d.zone} <small style={{ color: '#64748b' }}>({d.label})</small></td>
+                                                        <td style={{ padding: '10px 12px' }}>
+                                                            <span style={{ textTransform: 'uppercase', fontSize: 10, color: d.type === 'power' ? '#fbbf24' : '#67e8f9', background: '#020617', padding: '2px 6px', borderRadius: 4, border: '1px solid #1e293b' }}>
+                                                                {d.type}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px', color: '#94a3b8' }}>
+                                                            {d.lastSeen ? new Date(d.lastSeen).toLocaleTimeString() : 'Never'}
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px' }}>
+                                                            <span style={{ padding: '2px 8px', borderRadius: 99, fontSize: 10, fontWeight: 700, background: d.status === 'online' ? '#064e3b' : '#1e293b', color: d.status === 'online' ? '#34d399' : '#64748b' }}>
+                                                                ● {d.status === 'online' ? 'Online' : 'Offline'}
+                                                            </span>
+                                                        </td>
+                                                        <td style={{ padding: '10px 12px', color: '#fff' }}>
+                                                            {d.deviceId === 'PWR-F4' ? `${floor4Power.toFixed(1)} kW` :
+                                                             d.deviceId === 'WTR-TA' ? `${tankALevel.toFixed(1)}%` :
+                                                             d.type === 'power' ? '12.0 kW' : '82.0%'}
+                                                        </td>
+                                                    </tr>
+                                                ));
+                                            })()}
                                         </tbody>
                                     </table>
                                 </div>
@@ -822,10 +911,7 @@ export default function OrgPortalApp() {
                         </div>
                     )}
 
-                    {/* ── POWER & WATER SCADA VIEW ─────────────────────────── */}
-                    {(currentTab === 'power_water' || currentTab === 'power' || currentTab === 'water') && (
-                        <PowerWaterMonitoring orgId={authOrg.id} userRole={userRole} />
-                    )}
+
 
                     {/* ── DEVICES & DATA LOGS VIEW ──────────────────────────── */}
                     {currentTab === 'devices' && (

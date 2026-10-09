@@ -402,6 +402,9 @@ export const getPowerProfile = async (req, res) => {
             const b = await resolveBuilding(buildingId, orgId);
             if (!b) return res.status(404).json({ error: 'Building not found' });
 
+            const devices = await Device.find({ buildingId: b._id, type: 'power', active: { $ne: false } });
+            const deviceIds = devices.map(d => d.deviceId);
+
             const readings = await SensorReading.find({
                 orgId,
                 buildingId: b._id,
@@ -409,13 +412,13 @@ export const getPowerProfile = async (req, res) => {
                 ts: { $gte: start, $lte: end }
             }).sort({ ts: 1 });
 
-            // Bucket by 15-minute slot
+            // Bucket by 5-minute slot
             const slotMap = new Map();
             for (const r of readings) {
                 const ms = r.ts.getTime();
-                const bucketMs = Math.floor(ms / (15 * 60 * 1000)) * (15 * 60 * 1000);
+                const bucketMs = Math.floor(ms / (5 * 60 * 1000)) * (5 * 60 * 1000);
                 if (!slotMap.has(bucketMs)) {
-                    slotMap.set(bucketMs, { ts: new Date(bucketMs), time: formatTime(new Date(bucketMs)), total: 0, count: 0, byFloor: {} });
+                    slotMap.set(bucketMs, { ts: new Date(bucketMs), time: formatTime(new Date(bucketMs)), total: 0, count: 0, byFloor: {}, source: r.source });
                 }
                 const slot = slotMap.get(bucketMs);
                 const floorKey = `F${r.floor}`;
@@ -423,14 +426,35 @@ export const getPowerProfile = async (req, res) => {
                 slot.byFloor[floorKey].push(r.kw);
                 slot.total += r.kw;
                 slot.count += 1;
+                if (r.source === 'simulated-fault') slot.hasFault = true;
             }
 
             const series = [];
             for (const [bucketMs, slot] of Array.from(slotMap.entries()).sort((a, b) => a[0] - b[0])) {
+                const d = new Date(bucketMs);
+                const hour = d.getHours();
+
+                // Compute baseline for this building at this hour
+                let buildingBaseline = 0;
+                for (const dev of devices) {
+                    buildingBaseline += getExpectedBaseline(dev.deviceId, hour, isWeekend, 'kw');
+                }
+                const baselineRounded = Math.round(buildingBaseline * 10) / 10;
+                const expectedMin = Math.round(buildingBaseline * 0.85 * 10) / 10;
+                const expectedMax = Math.round(buildingBaseline * 1.15 * 10) / 10;
+                const actual = Math.round(slot.total * 10) / 10;
+                const isAnomaly = slot.hasFault || actual > (buildingBaseline * 1.35);
+
                 const point = {
                     ts: slot.ts,
                     time: slot.time,
-                    total: Math.round(slot.total * 10) / 10
+                    actual,
+                    baseline: baselineRounded,
+                    expectedMin,
+                    expectedMax,
+                    isAnomaly,
+                    total: actual,
+                    source: slot.source || 'seed'
                 };
                 for (const [fKey, vals] of Object.entries(slot.byFloor)) {
                     const avg = vals.reduce((a, c) => a + c, 0) / vals.length;
@@ -439,8 +463,25 @@ export const getPowerProfile = async (req, res) => {
                 series.push(point);
             }
 
-            // Cap at 500 points
-            const capped = series.slice(-500);
+            const openAlerts = await Alert.find({
+                orgId,
+                $or: [
+                    { buildingId: b._id },
+                    { deviceId: { $in: deviceIds } }
+                ],
+                type: { $in: ['power', 'power_surge'] },
+                status: 'open'
+            }).select('_id severity whyText title value expected createdAt deviceId');
+
+            const alertMarkers = openAlerts.map(a => ({
+                ts: a.createdAt,
+                alertId: a._id,
+                severity: a.severity,
+                message: a.whyText || a.title,
+                value: a.value,
+                expected: a.expected,
+                deviceId: a.deviceId
+            }));
 
             return res.json({
                 level: 'building',
@@ -448,13 +489,15 @@ export const getPowerProfile = async (req, res) => {
                 buildingName: b.name,
                 buildingCode: b.code,
                 floors: Array.from({ length: b.floors || 4 }, (_, i) => i + 1),
-                series: capped
+                series: series.slice(-500),
+                alertMarkers
             });
         }
 
         if (level === 'campus') {
             const buildings = await Building.find({ orgId, active: { $ne: false } });
             const buildingCodes = buildings.map(b => b.code);
+            const allPowerDevices = await Device.find({ orgId, type: 'power', active: { $ne: false } });
 
             const readings = await SensorReading.find({
                 orgId,
@@ -462,38 +505,80 @@ export const getPowerProfile = async (req, res) => {
                 ts: { $gte: start, $lte: end }
             }).populate('buildingId', 'code').sort({ ts: 1 });
 
+            // Bucket by 5-minute slot
             const slotMap = new Map();
             for (const r of readings) {
                 const ms = r.ts.getTime();
-                const bucketMs = Math.floor(ms / (15 * 60 * 1000)) * (15 * 60 * 1000);
+                const bucketMs = Math.floor(ms / (5 * 60 * 1000)) * (5 * 60 * 1000);
                 if (!slotMap.has(bucketMs)) {
-                    slotMap.set(bucketMs, { ts: new Date(bucketMs), time: formatTime(new Date(bucketMs)), total: 0, byBuilding: {} });
+                    slotMap.set(bucketMs, { ts: new Date(bucketMs), time: formatTime(new Date(bucketMs)), total: 0, byBuilding: {}, source: r.source });
                 }
                 const slot = slotMap.get(bucketMs);
                 const code = r.buildingId?.code || 'BLD';
                 if (!slot.byBuilding[code]) slot.byBuilding[code] = [];
                 slot.byBuilding[code].push(r.kw);
                 slot.total += r.kw;
+                if (r.source === 'simulated-fault') slot.hasFault = true;
             }
 
             const series = [];
             for (const [bucketMs, slot] of Array.from(slotMap.entries()).sort((a, b) => a[0] - b[0])) {
+                const d = new Date(bucketMs);
+                const hour = d.getHours();
+
+                // Compute total campus baseline for this hour
+                let campusBaseline = 0;
+                for (const dev of allPowerDevices) {
+                    campusBaseline += getExpectedBaseline(dev.deviceId, hour, isWeekend, 'kw');
+                }
+                const baselineRounded = Math.round(campusBaseline * 10) / 10;
+                const expectedMin = Math.round(campusBaseline * 0.85 * 10) / 10;
+                const expectedMax = Math.round(campusBaseline * 1.15 * 10) / 10;
+                const actual = Math.round(slot.total * 10) / 10;
+                const isAnomaly = slot.hasFault || actual > (campusBaseline * 1.35);
+
                 const point = {
                     ts: slot.ts,
                     time: slot.time,
-                    total: Math.round(slot.total * 10) / 10
+                    actual,
+                    baseline: baselineRounded,
+                    expectedMin,
+                    expectedMax,
+                    isAnomaly,
+                    total: actual,
+                    source: slot.source || 'seed'
                 };
                 for (const [code, vals] of Object.entries(slot.byBuilding)) {
                     const sum = vals.reduce((a, c) => a + c, 0);
-                    point[code] = Math.round(sum * 10) / 10;
+                    const rounded = Math.round(sum * 10) / 10;
+                    point[code] = rounded;
+                    if (code === 'AB') point['ACAD'] = rounded;
+                    if (code === 'ACAD') point['AB'] = rounded;
                 }
                 series.push(point);
             }
 
+            const openAlerts = await Alert.find({
+                orgId,
+                type: { $in: ['power', 'power_surge'] },
+                status: 'open'
+            }).select('_id severity whyText title value expected createdAt deviceId');
+
+            const alertMarkers = openAlerts.map(a => ({
+                ts: a.createdAt,
+                alertId: a._id,
+                severity: a.severity,
+                message: a.whyText || a.title,
+                value: a.value,
+                expected: a.expected,
+                deviceId: a.deviceId
+            }));
+
             return res.json({
                 level: 'campus',
                 buildings: buildingCodes,
-                series: series.slice(-500)
+                series: series.slice(-500),
+                alertMarkers
             });
         }
 
@@ -773,11 +858,18 @@ export const getWaterProfile = async (req, res) => {
         const series = readings.map(r => {
             const hour = r.ts.getHours();
             const isNightWindow = (hour >= 1 && hour < 4);
+            const actual = r.tank_level_pct;
+            const baseline = 75;
             return {
                 ts: r.ts,
                 time: formatTime(r.ts),
+                actual,
+                baseline,
+                expectedMin: 60,
+                expectedMax: 90,
                 tank_level_pct: r.tank_level_pct,
                 flow_lpm: r.flow_lpm,
+                isAnomaly: actual < 15 || (isNightWindow && r.flow_lpm > 1.0) || r.source === 'simulated-fault',
                 isNightWindow,
                 source: r.source
             };
@@ -840,15 +932,17 @@ export const allocateLargestRemainder = (items, targetSum = 100) => {
     }));
 };
 
-const getPeriodRange = (period = 'today') => {
+const getPeriodRange = (period = '24hr') => {
     const end = new Date();
     let start = new Date();
-    if (period === '24h') {
+    if (period === '3h' || period === '3hr') {
+        start = new Date(end.getTime() - 3 * 3600 * 1000);
+    } else if (period === '24h' || period === '24hr') {
         start = new Date(end.getTime() - 24 * 3600 * 1000);
     } else if (period === '3d') {
         start = new Date(end.getTime() - 3 * 24 * 3600 * 1000);
     } else {
-        start.setHours(0, 0, 0, 0);
+        start = new Date(end.getTime() - 24 * 3600 * 1000);
     }
     return { start, end };
 };
@@ -859,7 +953,7 @@ const getPeriodRange = (period = 'today') => {
 export const getPowerMix = async (req, res) => {
     try {
         const orgId = req.user?.orgId || req.user?.facilityId || req.query.orgId || 'bput_college';
-        const { buildingId, period = 'today' } = req.query;
+        const { buildingId, period = '24hr' } = req.query;
         const { start, end } = getPeriodRange(period);
 
         let rawItems = [];
@@ -964,7 +1058,7 @@ export const getPowerMix = async (req, res) => {
 export const getWaterMix = async (req, res) => {
     try {
         const orgId = req.user?.orgId || req.user?.facilityId || req.query.orgId || 'bput_college';
-        const { period = 'today' } = req.query;
+        const { period = '24hr' } = req.query;
         const { start, end } = getPeriodRange(period);
 
         const devices = await Device.find({ orgId, type: { $in: ['water', 'water_tank'] }, active: { $ne: false } }).lean();
