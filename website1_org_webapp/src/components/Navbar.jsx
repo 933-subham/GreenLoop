@@ -74,11 +74,6 @@ export default function Navigation() {
                             👥 Student / Public
                         </Nav.Link>
 
-                        
-                        {/* Live Fault Injection Control Panel */}
-                        <Link to="/demo" className="btn btn-outline-danger btn-sm rounded-pill px-3 py-1 fw-bold ms-1" style={{ fontSize: '0.8rem' }}>
-                            ⚡ Demo Console
-                        </Link>
 
                         {/* User Profile / Auth */}
                         {!user ? (

@@ -58,40 +58,21 @@ export default function SqliteOfflineModal({ isOpen, onClose, isSimulatedOffline
                     </div>
                 )}
 
-                {/* Offline Simulation Control Banner */}
-                <div className={`p-4 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs ${
-                    isSimulatedOffline
-                        ? 'bg-amber-950/30 border-amber-500/40 text-amber-200'
-                        : 'bg-emerald-950/20 border-emerald-500/30 text-emerald-200'
-                }`}>
+                {/* Offline SQLite Status Banner */}
+                <div className="p-4 rounded-xl border bg-slate-950 border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                     <div className="flex items-center gap-3">
-                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold ${
-                            isSimulatedOffline ? 'bg-amber-500/20 text-amber-400' : 'bg-emerald-500/20 text-emerald-400'
-                        }`}>
-                            {isSimulatedOffline ? <WifiOff className="w-4 h-4" /> : <Wifi className="w-4 h-4" />}
+                        <div className="w-8 h-8 rounded-lg flex items-center justify-center font-bold bg-emerald-500/20 text-emerald-400">
+                            <Wifi className="w-4 h-4" />
                         </div>
                         <div>
-                            <div className="font-bold">
-                                {isSimulatedOffline ? 'Simulated Offline Mode ACTIVE (SQLite Driven)' : 'Online Mode Active (Live Telemetry & Cloud)'}
+                            <div className="font-bold text-white">
+                                SQLite Offline Storage Synchronized
                             </div>
                             <p className="text-[11px] text-slate-400">
-                                {isSimulatedOffline
-                                    ? 'Network disabled for testing. Telemetry and incident records read/write directly to SQLite.'
-                                    : 'Live Open-Meteo API and backend webhooks active.'}
+                                Local browser SQLite replica mirrors facility sensors, telemetry logs, and maintenance actions for network redundancy.
                             </p>
                         </div>
                     </div>
-
-                    <button
-                        onClick={onToggleOfflineMode}
-                        className={`px-3 py-1.5 rounded-lg font-mono font-bold transition-all shadow-sm shrink-0 ${
-                            isSimulatedOffline
-                                ? 'bg-emerald-600 hover:bg-emerald-500 text-slate-950'
-                                : 'bg-amber-600 hover:bg-amber-500 text-slate-950'
-                        }`}
-                    >
-                        {isSimulatedOffline ? 'Switch Online' : 'Simulate Offline Mode'}
-                    </button>
                 </div>
 
                 {/* SQLite Database Tables */}

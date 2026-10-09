@@ -28,7 +28,7 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, currentOrg 
 
     if (!isOpen) return null;
 
-    // Quick demo 1-click accounts
+    // Quick demo 1-click account
     const demoAccounts = [
         {
             id: 'bput_college',
@@ -41,42 +41,6 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, currentOrg 
             role: 'admin',
             lat: 22.2585,
             lon: 84.8480
-        },
-        {
-            id: 'district_hospital',
-            name: 'District Multi-Specialty General Hospital',
-            type: 'hospital',
-            typeName: '🏥 General Hospital',
-            city: 'Bhubaneswar',
-            adminName: 'Dr. Sunita Tripathy',
-            adminEmail: 'superintendent@district-hospital.gov.in',
-            role: 'admin',
-            lat: 20.2961,
-            lon: 85.8245
-        },
-        {
-            id: 'industrial_estate',
-            name: 'Kalinga Industrial Estate & Metals PSU',
-            type: 'industry',
-            typeName: '🏭 Industrial Estate & PSU',
-            city: 'Jharsuguda',
-            adminName: 'Er. Rajesh Mohapatra',
-            adminEmail: 'plant.head@kalingametals.in',
-            role: 'operations',
-            lat: 21.8550,
-            lon: 84.0062
-        },
-        {
-            id: 'dps_school',
-            name: 'DPS Senior Public School & Green Campus',
-            type: 'school',
-            typeName: '🏫 Senior Public School',
-            city: 'Cuttack',
-            adminName: 'Mrs. Anita Das (Principal)',
-            adminEmail: 'principal@dps-green.edu.in',
-            role: 'sustainability',
-            lat: 20.4625,
-            lon: 85.8830
         }
     ];
 
@@ -292,17 +256,10 @@ export default function AuthModal({ isOpen, onClose, onLoginSuccess, currentOrg 
 
                         <div className="grid grid-cols-2 gap-3">
                             <div>
-                                <label className="block text-slate-400 mb-1 font-mono">Facility Category *</label>
-                                <select
-                                    value={regForm.type}
-                                    onChange={(e) => setRegForm({ ...regForm, type: e.target.value })}
-                                    className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white font-mono"
-                                >
-                                    <option value="college">🎓 Engineering College / University</option>
-                                    <option value="hospital">🏥 Multi-Specialty General Hospital</option>
-                                    <option value="industry">🏭 Industrial Estate / Metals PSU</option>
-                                    <option value="school">🏫 Senior Public School & Campus</option>
-                                </select>
+                                <label className="block text-slate-400 mb-1 font-mono">Facility Category</label>
+                                <div className="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-white font-mono text-xs">
+                                    🎓 Engineering College
+                                </div>
                             </div>
 
                             <div>

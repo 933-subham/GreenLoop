@@ -1,0 +1,209 @@
+{
+  "info": {
+    "_postman_id": "estateiq-facility-v1",
+    "name": "EstateIQ Facility Telemetry & Fault Ingestion API",
+    "description": "Postman collection for EstateIQ SCADA power and water monitoring, device telemetry ingestion, fault injection, resets, and anomaly detection alarms.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "1. Ingest Reading (Power)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-device-token",
+            "value": "demo-token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"PWR-HA-F4\",\n  \"kw\": 7.2\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/ingest/readings",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "ingest", "readings"]
+        }
+      }
+    },
+    {
+      "name": "2. Ingest Reading (Water)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "x-device-token",
+            "value": "demo-token"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"WTR-HA-T1\",\n  \"tank_level_pct\": 72.5,\n  \"flow_lpm\": 0.35\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/ingest/readings",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "ingest", "readings"]
+        }
+      }
+    },
+    {
+      "name": "3. Inject Fault (Power Spike)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"PWR-HA-F4\",\n  \"faultType\": \"spike\",\n  \"durationSec\": 300\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/sim/inject-fault",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "sim", "inject-fault"]
+        }
+      }
+    },
+    {
+      "name": "4. Inject Fault (Tank Leak)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"WTR-HA-T1\",\n  \"faultType\": \"tank_leak\",\n  \"durationSec\": 300\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/sim/inject-fault",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "sim", "inject-fault"]
+        }
+      }
+    },
+    {
+      "name": "5. Reset Faults (All)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"orgId\": \"bput_college\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/sim/reset",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "sim", "reset"]
+        }
+      }
+    },
+    {
+      "name": "6. Reset Faults (One Device)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"deviceId\": \"PWR-HA-F4\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/sim/reset",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "sim", "reset"]
+        }
+      }
+    },
+    {
+      "name": "7. Get Alerts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:5000/api/alerts?orgId=bput_college&status=open",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "alerts"],
+          "query": [
+            {
+              "key": "orgId",
+              "value": "bput_college"
+            },
+            {
+              "key": "status",
+              "value": "open"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Ack Alert",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"acknowledged\",\n  \"note\": \"Maintenance team dispatched to inspect Floor 4 breaker panel.\"\n}"
+        },
+        "url": {
+          "raw": "http://localhost:5000/api/alerts/:id/ack",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "5000",
+          "path": ["api", "alerts", ":id", "ack"],
+          "variable": [
+            {
+              "key": "id",
+              "value": "ALERT_ID_HERE"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ import express from 'express';
 import dotenv from 'dotenv';
 import cors from 'cors';
 import path from 'path';
+import fs from 'fs';
 import { fileURLToPath } from 'url';
 import connectDB from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
@@ -18,6 +19,10 @@ import analyticsRoutes from './routes/analyticsRoutes.js';
 import binRoutes from './routes/binRoutes.js';
 import actionRoutes from './routes/actionRoutes.js';
 import demoRoutes from './routes/demoRoutes.js';
+import readingRoutes from './routes/readingRoutes.js';
+import simRoutes from './routes/simRoutes.js';
+import { seedCampusHierarchy } from './services/campusSeeder.js';
+import { startSimulator } from './services/simulatorService.js';
 
 dotenv.config();
 connectDB();
@@ -49,9 +54,20 @@ app.use('/api/bins', binRoutes);
 app.use('/api/actions', actionRoutes);
 app.use('/api/demo', demoRoutes);
 
+// Device Registry, Ingest & Real-Time Telemetry Routes
+app.use('/api', readingRoutes);
+app.use('/api/sim', simRoutes);
+
 // Serve Dual Portals (Website 1 & Website 2)
-app.use('/org', express.static(path.join(__dirname, '../website1_org_portal')));
-app.use('/municipal', express.static(path.join(__dirname, '../website2_municipal_portal')));
+const orgDist = fs.existsSync(path.join(__dirname, '../website1_org_webapp/dist'))
+    ? path.join(__dirname, '../website1_org_webapp/dist')
+    : path.join(__dirname, '../website1_org_portal');
+const muniDist = fs.existsSync(path.join(__dirname, '../website2_municipal_webapp/dist'))
+    ? path.join(__dirname, '../website2_municipal_webapp/dist')
+    : path.join(__dirname, '../website2_municipal_portal');
+
+app.use('/org', express.static(orgDist));
+app.use('/municipal', express.static(muniDist));
 app.get('/', (req, res) => res.redirect('/org'));
 
 app.get('/api', (req, res) => res.json({ status: 'GreenLoop PS-4 Facility Intelligence API running 🌿', version: '2.5.0' }));
@@ -64,4 +80,14 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`🌿 EcoCity Server running on port ${PORT} in ${process.env.NODE_ENV} mode`));
+app.listen(PORT, async () => {
+    console.log(`🌿 EcoCity Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
+    try {
+        await seedCampusHierarchy('bput_college');
+        if (process.env.SIM_AUTOSTART === 'true') {
+            startSimulator();
+        }
+    } catch (e) {
+        console.error('Initialization error:', e.message);
+    }
+});

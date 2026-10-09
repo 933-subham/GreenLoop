@@ -1,0 +1,3 @@
+ts,deviceId,type,buildingId,floor,zone,source,kw,tank_level_pct,flow_lpm
+"2026-10-09T07:17:47.982Z","TEST-LOG-COPY","power","HA","1","Test Zone","live",11.2,,
+"2026-10-09T07:26:33.090Z","TEST-LOG-COPY","power","HA","1","Test Zone","live",11.2,,
