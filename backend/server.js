@@ -84,6 +84,7 @@ app.listen(PORT, async () => {
     console.log(`🌿 EcoCity Server running on port ${PORT} in ${process.env.NODE_ENV} mode`);
     try {
         await seedCampusHierarchy('bput_college');
+        await seedCampusHierarchy('city_hospital', false, 'hospital');
         if (process.env.SIM_AUTOSTART === 'true') {
             startSimulator();
         }

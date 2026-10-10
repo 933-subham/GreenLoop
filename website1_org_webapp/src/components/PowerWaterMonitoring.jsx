@@ -71,7 +71,7 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                     params.floor = selectedFloor;
                 }
 
-                const res = await axios.get(`${API_BASE}/power/overview`, { params, timeout: 3500 });
+                const res = await axios.get(`${API_BASE}/power/overview`, { params, timeout: 15000 });
                 if (Array.isArray(res.data)) {
                     setOverviewBars(res.data);
                     setIsOffline(false);
@@ -87,15 +87,17 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                     params.buildingId = selectedBuilding.code || selectedBuilding.id;
                 }
 
-                const res = await axios.get(`${API_BASE}/water/overview`, { params, timeout: 3500 });
+                const res = await axios.get(`${API_BASE}/water/overview`, { params, timeout: 15000 });
                 if (Array.isArray(res.data)) {
                     setOverviewBars(res.data);
                     setIsOffline(false);
                 }
             }
         } catch (err) {
-            console.warn('Overview fetch error, checking offline cache:', err.message);
-            setIsOffline(true);
+            console.warn('Overview fetch error:', err.message);
+            if (!err.response && (err.code === 'ERR_NETWORK' || err.message?.includes('Network Error'))) {
+                setIsOffline(true);
+            }
         }
     }, [activeTab, level, selectedBuilding, selectedFloor, powerMetric, waterMetric, orgId]);
 
@@ -114,7 +116,7 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                     params.floor = selectedFloor;
                 }
 
-                const res = await axios.get(`${API_BASE}/power/profile`, { params, timeout: 3500 });
+                const res = await axios.get(`${API_BASE}/power/profile`, { params, timeout: 15000 });
                 setProfileData(res.data);
                 if (res.data?.series?.length > 0) {
                     const lastPoint = res.data.series[res.data.series.length - 1];
@@ -128,7 +130,7 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
                     params.buildingId = selectedBuilding.code || selectedBuilding.id;
                 }
 
-                const res = await axios.get(`${API_BASE}/water/profile`, { params, timeout: 3500 });
+                const res = await axios.get(`${API_BASE}/water/profile`, { params, timeout: 15000 });
                 setProfileData(res.data);
                 if (res.data?.series?.length > 0) {
                     const lastPoint = res.data.series[res.data.series.length - 1];
@@ -143,7 +145,7 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
     // ── Fetch Open Alerts ─────────────────────────────────────────────────────
     const fetchAlerts = useCallback(async () => {
         try {
-            const res = await axios.get(`${API_BASE}/alerts`, { params: { orgId, status: 'open' }, timeout: 3500 });
+            const res = await axios.get(`${API_BASE}/alerts`, { params: { orgId, status: 'open' }, timeout: 15000 });
             if (Array.isArray(res.data)) {
                 setAlerts(res.data);
             }
@@ -160,7 +162,7 @@ export default function PowerWaterMonitoring({ orgId = 'bput_college', userRole 
             if (level === 'building' && selectedBuilding) {
                 params.buildingId = selectedBuilding.code || selectedBuilding.id;
             }
-            const res = await axios.get(endpoint, { params, timeout: 3500 });
+            const res = await axios.get(endpoint, { params, timeout: 15000 });
             if (Array.isArray(res.data)) {
                 setMixData(res.data);
             }

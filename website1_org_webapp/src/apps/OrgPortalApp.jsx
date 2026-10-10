@@ -5,7 +5,7 @@ import {
     Sliders, Award, Eye, MapPin, Wind, Thermometer,
     Clock, Check, Sparkles, BookOpen, Info, Database, User,
     LayoutDashboard, ChevronRight, Menu, Radio, BarChart3,
-    Search, Filter, X
+    Search, Filter, X, LogOut, HeartPulse, GraduationCap
 } from 'lucide-react';
 import {
     ResponsiveContainer, AreaChart, Area, BarChart, Bar, Line,
@@ -131,20 +131,43 @@ const TOOLTIP_STYLE = { backgroundColor: '#0f172a', borderColor: '#334155', bord
 const AXIS_STYLE = { fontSize: 11, fill: '#64748b' };
 
 export default function OrgPortalApp() {
-    // ── Auth / org state ──────────────────────────────────────────────────────
-    const [authOrg, setAuthOrg] = useState(() => ({
-        id: 'bput_college',
-        name: 'BPUT National Engineering College',
-        type: 'college',
-        typeName: 'Engineering College',
-        city: 'Rourkela',
-        state: 'Odisha',
-        lat: 22.2585,
-        lon: 84.8480,
-        adminName: 'Prof. S. K. Nayak',
-        adminEmail: 'dean.admin@bput.ac.in',
-        role: 'admin'
-    }));
+    const [authOrg, setAuthOrg] = useState(() => {
+        try {
+            const saved = localStorage.getItem('estateiq_user');
+            if (saved) {
+                const p = JSON.parse(saved);
+                if (p && (p.id || p.orgId)) {
+                    return {
+                        id: p.id || p.orgId,
+                        name: p.name || p.orgName || 'BPUT National Engineering College',
+                        type: p.type || p.orgType || 'college',
+                        typeName: p.typeName || (p.type === 'hospital' || p.orgType === 'hospital' ? 'Healthcare / Hospital' : 'Engineering College'),
+                        city: p.city || p.cityName || 'Rourkela',
+                        state: p.state || 'Odisha',
+                        lat: p.lat || (p.orgType === 'hospital' ? 20.2961 : 22.2585),
+                        lon: p.lon || (p.orgType === 'hospital' ? 85.8245 : 84.8480),
+                        adminName: p.adminName || p.name || 'Prof. S. K. Nayak',
+                        adminEmail: p.adminEmail || p.email || 'dean.admin@bput.ac.in',
+                        role: p.role || 'admin',
+                        token: p.token || null
+                    };
+                }
+            }
+        } catch (e) {}
+        return {
+            id: 'bput_college',
+            name: 'BPUT National Engineering College',
+            type: 'college',
+            typeName: 'Engineering College',
+            city: 'Rourkela',
+            state: 'Odisha',
+            lat: 22.2585,
+            lon: 84.8480,
+            adminName: 'Prof. S. K. Nayak',
+            adminEmail: 'dean.admin@bput.ac.in',
+            role: 'admin'
+        };
+    });
     const [userRole, setUserRole] = useState('admin');
     const [currentTab, setCurrentTab] = useState('overview');
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -232,10 +255,10 @@ export default function OrgPortalApp() {
 
     // ── 2. Poll Real-time Devices, Alerts & Readings (Every 2.5s) ──────────────
     const pollTelemetry = async () => {
-        if (isSimulatedOffline) return;
+        if (!authOrg || isSimulatedOffline) return;
         try {
             // A. Fetch Devices
-            const devRes = await axios.get(`${API_BASE}/devices`).catch(() => null);
+            const devRes = await axios.get(`${API_BASE}/devices?orgId=${authOrg.id}`).catch(() => null);
             if (devRes && devRes.data) {
                 setDevices(devRes.data);
             }
@@ -248,7 +271,7 @@ export default function OrgPortalApp() {
             }
 
             // C. Fetch Power Readings from GET /api/readings
-            const pRes = await axios.get(`${API_BASE}/readings?type=power&limit=48`).catch(() => null);
+            const pRes = await axios.get(`${API_BASE}/readings?orgId=${authOrg.id}&type=power&limit=48`).catch(() => null);
             if (pRes && pRes.data && Array.isArray(pRes.data.readings) && pRes.data.readings.length > 0) {
                 const rawP = pRes.data.readings;
                 // Find latest Floor 4 reading
@@ -287,7 +310,7 @@ export default function OrgPortalApp() {
             }
 
             // D. Fetch Water Readings from GET /api/readings
-            const wRes = await axios.get(`${API_BASE}/readings?type=water&limit=36`).catch(() => null);
+            const wRes = await axios.get(`${API_BASE}/readings?orgId=${authOrg.id}&type=water&limit=36`).catch(() => null);
             if (wRes && wRes.data && Array.isArray(wRes.data.readings) && wRes.data.readings.length > 0) {
                 const rawW = wRes.data.readings;
                 const taReadings = rawW.filter(r => r.deviceId === 'WTR-TA' || r.zone === 'Tank-A');
@@ -319,10 +342,11 @@ export default function OrgPortalApp() {
     };
 
     useEffect(() => {
+        if (!authOrg) return;
         fetchWeather(authOrg.lat, authOrg.lon);
         pollTelemetry();
 
-        const weatherInt = setInterval(() => fetchWeather(authOrg.lat, authOrg.lon), 60000);
+        const weatherInt = setInterval(() => { if (authOrg) fetchWeather(authOrg.lat, authOrg.lon); }, 60000);
         const pollInt = setInterval(pollTelemetry, 2500); // 2.5s rapid poll for Postman changes
         const scadaTick = setInterval(() => {
             setStreamVolts((230 + Math.random() * 2.0).toFixed(1));
@@ -336,10 +360,45 @@ export default function OrgPortalApp() {
     }, [authOrg, isSimulatedOffline]);
 
     const handleLoginSuccess = (profile) => {
-        setAuthOrg(profile);
-        setUserRole(profile.role || 'admin');
-        showToast(`✓ Session: ${profile.adminName} @ ${profile.name}`);
-        fetchWeather(profile.lat, profile.lon);
+        if (!profile) return;
+        const orgId = profile.orgId || profile.id || (profile.email?.includes('hospital') ? 'city_hospital' : 'bput_college');
+        const orgType = profile.orgType || profile.type || (orgId.includes('hospital') ? 'hospital' : 'college');
+        const orgName = profile.orgName || profile.name || (orgId === 'city_hospital' ? 'Apollo & AIIMS Super-Specialty Hospital' : 'BPUT National Engineering College');
+        const typeName = profile.typeName || (orgType === 'hospital' ? 'Healthcare / Hospital' : orgType === 'college' ? 'Engineering College' : 'Smart Civic Center');
+
+        const newOrg = {
+            id: orgId,
+            name: orgName,
+            type: orgType,
+            typeName,
+            city: profile.cityName || profile.city || (orgId === 'city_hospital' ? 'Bhubaneswar' : 'Rourkela'),
+            state: profile.state || 'Odisha',
+            lat: profile.lat || (orgType === 'hospital' ? 20.2961 : 22.2585),
+            lon: profile.lon || (orgType === 'hospital' ? 85.8245 : 84.8480),
+            adminName: profile.adminName || profile.name || (orgId === 'city_hospital' ? 'Dr. A. K. Mohapatra' : 'Prof. S. K. Nayak'),
+            adminEmail: profile.adminEmail || profile.email || (orgId === 'city_hospital' ? 'director.med@cityhospital.org' : 'dean.admin@bput.ac.in'),
+            role: profile.role || 'admin',
+            token: profile.token || null
+        };
+
+        setAuthOrg(newOrg);
+        if (profile.role) setUserRole(profile.role);
+        try {
+            localStorage.setItem('estateiq_user', JSON.stringify(newOrg));
+            if (profile.token) localStorage.setItem('token', profile.token);
+        } catch (e) {}
+
+        showToast(`✓ Signed in as ${newOrg.adminName} (${newOrg.name})`);
+        fetchWeather(newOrg.lat, newOrg.lon);
+    };
+
+    const handleLogout = () => {
+        try {
+            localStorage.removeItem('estateiq_user');
+            localStorage.removeItem('token');
+        } catch (e) {}
+        setAuthOrg(null);
+        showToast('Logged out. Please sign in to continue.');
     };
 
     // Find any active alerts for Floor 4 or Tank A
@@ -416,6 +475,20 @@ export default function OrgPortalApp() {
 
     const activeNav = NAV_ITEMS.find(n => n.id === currentTab) || NAV_ITEMS[0];
 
+    // Gated unauthenticated screen
+    if (!authOrg) {
+        return (
+            <div style={{ minHeight: '100vh', background: '#020617', color: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24, fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
+                <AuthModal
+                    isOpen={true}
+                    canClose={false}
+                    onLoginSuccess={handleLoginSuccess}
+                    defaultMode="login"
+                />
+            </div>
+        );
+    }
+
     return (
         <div style={{ minHeight: '100vh', background: '#020617', color: '#f1f5f9', display: 'flex', flexDirection: 'column', fontFamily: "'Plus Jakarta Sans', system-ui, sans-serif" }}>
 
@@ -430,19 +503,40 @@ export default function OrgPortalApp() {
                     >
                         <Menu size={20} />
                     </button>
-                    <div style={{ width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#10b981,#06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        <Building2 size={18} color="#020617" />
+                    <div style={{
+                        width: 34, height: 34, borderRadius: 10,
+                        background: authOrg.type === 'hospital'
+                            ? 'linear-gradient(135deg, #f43f5e, #fb7185)'
+                            : authOrg.type === 'college'
+                            ? 'linear-gradient(135deg, #10b981, #06b6d4)'
+                            : 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                    }}>
+                        {authOrg.type === 'hospital' ? <HeartPulse size={18} color="#fff" /> :
+                         authOrg.type === 'college' ? <GraduationCap size={18} color="#020617" /> :
+                         <Building2 size={18} color="#020617" />}
                     </div>
                     <div>
-                        <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.2 }}>{authOrg.name}</div>
+                        <div style={{ fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.2, display: 'flex', alignItems: 'center', gap: 6 }}>
+                            {authOrg.name}
+                            <span style={{
+                                fontSize: 9, padding: '1px 6px', borderRadius: 4, fontFamily: 'monospace', fontWeight: 700,
+                                background: authOrg.type === 'hospital' ? '#4c0519' : '#064e3b',
+                                color: authOrg.type === 'hospital' ? '#fda4af' : '#6ee7b7',
+                                border: authOrg.type === 'hospital' ? '1px solid #9f1239' : '1px solid #047857'
+                            }}>
+                                {authOrg.type === 'hospital' ? 'HOSPITAL' : authOrg.type === 'college' ? 'COLLEGE' : 'CIVIC'}
+                            </span>
+                        </div>
                         <div style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>{authOrg.typeName} · {authOrg.city}, {authOrg.state}</div>
                     </div>
                 </div>
 
                 {/* Right: Sensors & Profile */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                     {/* Live Open-Meteo strip */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 14, background: '#020617', border: '1px solid #1e293b', borderRadius: 10, padding: '5px 12px', fontSize: 11, fontFamily: 'monospace' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#020617', border: '1px solid #1e293b', borderRadius: 10, padding: '5px 10px', fontSize: 11, fontFamily: 'monospace' }}>
                         <span style={{ color: '#fbbf24', display: 'flex', alignItems: 'center', gap: 4 }}>
                             <Thermometer size={13} />{ambientData.temperature}°C
                         </span>
@@ -453,19 +547,41 @@ export default function OrgPortalApp() {
                             PM2.5 {ambientData.pm25} ({ambientData.aqiBand})
                         </span>
                         <span style={{ color: ambientData.isLive ? '#10b981' : '#f59e0b', fontSize: 10 }}>
-                            ● {ambientData.isLive ? 'Live Station' : 'Cached'}
+                            ● {ambientData.isLive ? 'Live' : 'Cached'}
                         </span>
                     </div>
 
                     {/* SQLite Offline Monitor */}
-                    <button onClick={() => setShowSqliteModal(true)} style={{ background: '#1e1b4b', border: '1px solid #4c1d95', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontFamily: 'monospace', color: '#c084fc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => setShowSqliteModal(true)} style={{ background: '#1e1b4b', border: '1px solid #4c1d95', borderRadius: 8, padding: '5px 8px', fontSize: 11, fontFamily: 'monospace', color: '#c084fc', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <Database size={13} />{dbRecordCount} rows
                     </button>
 
-                    {/* Auth profile button */}
-                    <button onClick={() => setShowAuthModal(true)} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '5px 12px', fontSize: 11, fontFamily: 'monospace', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    {/* User profile button */}
+                    <button onClick={() => setShowAuthModal(true)} style={{ background: '#1e293b', border: '1px solid #334155', borderRadius: 8, padding: '5px 10px', fontSize: 11, fontFamily: 'monospace', color: '#e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 5 }}>
                         <User size={13} color="#10b981" />
-                        {authOrg.adminName}
+                        <span style={{ maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{authOrg.adminName}</span>
+                    </button>
+
+                    {/* Logout button */}
+                    <button
+                        onClick={handleLogout}
+                        title="Sign Out"
+                        style={{
+                            background: '#1e293b',
+                            border: '1px solid #475569',
+                            borderRadius: 8,
+                            padding: '5px 9px',
+                            fontSize: 11,
+                            fontFamily: 'monospace',
+                            color: '#f87171',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 4
+                        }}
+                    >
+                        <LogOut size={13} />
+                        Logout
                     </button>
                 </div>
             </header>
@@ -534,13 +650,39 @@ export default function OrgPortalApp() {
                     </nav>
 
                     {/* Sidebar footer */}
-                    {sidebarOpen && (
-                        <div style={{ borderTop: '1px solid #1e293b', padding: '10px 12px' }}>
-                            <button onClick={() => setShowAssumptionsModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: '#64748b', fontSize: 11, cursor: 'pointer', padding: '5px 4px' }}>
-                                <BookOpen size={13} /> Model Assumptions
+                    <div style={{ borderTop: '1px solid #1e293b', padding: '10px 12px', marginTop: 'auto' }}>
+                        {sidebarOpen && (
+                            <div style={{ marginBottom: 8, padding: '8px 10px', background: '#020617', borderRadius: 8, border: '1px solid #1e293b' }}>
+                                <div style={{ fontSize: 11, fontWeight: 700, color: '#f1f5f9', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {authOrg.adminName}
+                                </div>
+                                <div style={{ fontSize: 10, color: '#64748b', fontFamily: 'monospace', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {authOrg.adminEmail}
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            {sidebarOpen && (
+                                <button onClick={() => setShowAssumptionsModal(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', color: '#64748b', fontSize: 11, cursor: 'pointer', padding: '5px 4px' }}>
+                                    <BookOpen size={13} /> Model Assumptions
+                                </button>
+                            )}
+                            <button
+                                onClick={handleLogout}
+                                title="Sign Out / Switch Facility"
+                                style={{
+                                    display: 'flex', alignItems: 'center', gap: 8,
+                                    background: 'none', border: 'none', color: '#f87171',
+                                    fontSize: 11, cursor: 'pointer', padding: '6px 4px',
+                                    width: '100%', justifyContent: sidebarOpen ? 'flex-start' : 'center',
+                                    fontWeight: 600
+                                }}
+                            >
+                                <LogOut size={14} />
+                                {sidebarOpen && <span>Sign Out</span>}
                             </button>
                         </div>
-                    )}
+                    </div>
                 </aside>
 
                 {/* ── MAIN CONTENT ─────────────────────────────────────────── */}
@@ -709,7 +851,7 @@ export default function OrgPortalApp() {
                             </Card>
 
                             {/* ── POWER & WATER SCADA MONITORING (EMBEDDED ON DASHBOARD) ── */}
-                            <PowerWaterMonitoring orgId={authOrg.id} userRole={userRole} />
+                            <PowerWaterMonitoring key={authOrg.id} orgId={authOrg.id} userRole={userRole} />
 
                             {/* ── DEVICE REGISTRY TABLE (Requirement 2 & 7) ─────────────── */}
                             <Card className="p-5">
@@ -1172,7 +1314,7 @@ export default function OrgPortalApp() {
                 </div>
             )}
 
-            {showAuthModal && <AuthModal onLoginSuccess={handleLoginSuccess} onClose={() => setShowAuthModal(false)} />}
+            {showAuthModal && <AuthModal currentOrg={authOrg} onLoginSuccess={handleLoginSuccess} onClose={() => setShowAuthModal(false)} />}
             {showSqliteModal && <SqliteOfflineModal isSimulatedOffline={isSimulatedOffline} onToggleOffline={() => { setIsSimulatedOffline(o => !o); }} onClose={() => setShowSqliteModal(false)} />}
         </div>
     );

@@ -56,13 +56,56 @@ export const getPowerOverview = async (req, res) => {
 
         if (level === 'campus') {
             const buildings = await Building.find({ orgId, active: { $ne: false } });
+            const allDevices = await Device.find({ orgId, type: 'power', active: { $ne: false } });
+            const openAlertsList = await Alert.find({ orgId, type: { $in: ['power', 'power_surge'] }, status: 'open' });
+
+            // 1 single aggregate for the whole campus:
+            const agg = await SensorReading.aggregate([
+                {
+                    $match: {
+                        orgId,
+                        type: 'power',
+                        ts: { $gte: start, $lte: end }
+                    }
+                },
+                {
+                    $group: {
+                        _id: { buildingId: '$buildingId', deviceId: '$deviceId' },
+                        avgKw: { $avg: '$kw' }
+                    }
+                }
+            ]);
+
+            // Index aggregate results by buildingId
+            const bldgDeviceAvgMap = new Map();
+            for (const item of agg) {
+                const bId = item._id.buildingId?.toString();
+                if (!bId) continue;
+                if (!bldgDeviceAvgMap.has(bId)) bldgDeviceAvgMap.set(bId, 0);
+                bldgDeviceAvgMap.set(bId, bldgDeviceAvgMap.get(bId) + (item.avgKw || 0));
+            }
+
+            // Pre-group devices by building
+            const devicesByBldg = new Map();
+            for (const d of allDevices) {
+                const bId = d.buildingId?.toString();
+                if (!devicesByBldg.has(bId)) devicesByBldg.set(bId, []);
+                devicesByBldg.get(bId).push(d);
+            }
+
+            const alertsByBldg = new Map();
+            for (const a of openAlertsList) {
+                const bId = a.buildingId?.toString();
+                if (bId) {
+                    alertsByBldg.set(bId, (alertsByBldg.get(bId) || 0) + 1);
+                }
+            }
+
             const bars = [];
-
             for (const b of buildings) {
-                const devices = await Device.find({ buildingId: b._id, type: 'power', active: { $ne: false } });
-                const deviceIds = devices.map(d => d.deviceId);
+                const bIdStr = b._id.toString();
+                const devices = devicesByBldg.get(bIdStr) || [];
 
-                // Expected kWh for building
                 let dailyExpKwh = 0;
                 for (const d of devices) {
                     for (let h = 0; h < 24; h++) {
@@ -70,41 +113,12 @@ export const getPowerOverview = async (req, res) => {
                     }
                 }
                 const expAvgKw = dailyExpKwh / 24;
-
-                // Actual readings aggregation
-                const agg = await SensorReading.aggregate([
-                    {
-                        $match: {
-                            orgId,
-                            buildingId: b._id,
-                            type: 'power',
-                            ts: { $gte: start, $lte: end }
-                        }
-                    },
-                    {
-                        $group: {
-                            _id: '$deviceId',
-                            avgKw: { $avg: '$kw' }
-                        }
-                    }
-                ]);
-
-                const actualAvgKw = agg.reduce((sum, item) => sum + (item.avgKw || 0), 0);
+                const actualAvgKw = bldgDeviceAvgMap.get(bIdStr) || 0;
                 const actualKwh = actualAvgKw * hours;
                 const expectedKwh = expAvgKw * hours;
 
-                // Open power alerts count
-                const openAlerts = await Alert.countDocuments({
-                    orgId,
-                    $or: [
-                        { buildingId: b._id },
-                        { deviceId: { $in: deviceIds } }
-                    ],
-                    type: { $in: ['power', 'power_surge'] },
-                    status: 'open'
-                });
+                const openAlerts = alertsByBldg.get(bIdStr) || 0;
 
-                // Convert metric
                 let value = actualKwh;
                 let expected = expectedKwh;
                 if (metric === 'kw') {
@@ -672,7 +686,7 @@ export const getWaterOverview = async (req, res) => {
 
             // 2. Building Overhead Tanks
             for (const b of buildings) {
-                const device = await Device.findOne({ buildingId: b._id, type: 'water', active: { $ne: false } });
+                const device = await Device.findOne({ buildingId: b._id, type: { $in: ['water', 'water_tank'] }, active: { $ne: false } });
                 if (!device) continue;
 
                 const latest = await SensorReading.findOne({ deviceId: device.deviceId }).sort({ ts: -1 });
@@ -747,7 +761,7 @@ export const getWaterOverview = async (req, res) => {
             const b = await resolveBuilding(buildingId, orgId);
             if (!b) return res.status(404).json({ error: 'Building not found' });
 
-            const devices = await Device.find({ buildingId: b._id, type: 'water', active: { $ne: false } });
+            const devices = await Device.find({ buildingId: b._id, type: { $in: ['water', 'water_tank'] }, active: { $ne: false } });
             const bars = [];
 
             for (const d of devices) {
@@ -836,7 +850,7 @@ export const getWaterProfile = async (req, res) => {
         if (!targetDeviceId && buildingId) {
             const b = await resolveBuilding(buildingId, orgId);
             if (b) {
-                const dev = await Device.findOne({ buildingId: b._id, type: 'water', active: { $ne: false } });
+                const dev = await Device.findOne({ buildingId: b._id, type: { $in: ['water', 'water_tank'] }, active: { $ne: false } });
                 if (dev) targetDeviceId = dev.deviceId;
             }
         }
@@ -845,15 +859,18 @@ export const getWaterProfile = async (req, res) => {
             targetDeviceId = 'WTR-CAMPUS-T1';
         }
 
-        const device = await Device.findOne({ deviceId: targetDeviceId }) || {
+        const device = await Device.findOne({ deviceId: targetDeviceId, ...(orgId ? { orgId } : {}) }) || {
             deviceId: targetDeviceId,
             label: `${targetDeviceId} Water Tank`
         };
 
-        const readings = await SensorReading.find({
+        const waterReadingQuery = {
             deviceId: targetDeviceId,
             ts: { $gte: start, $lte: end }
-        }).sort({ ts: 1 }).limit(500);
+        };
+        if (orgId) waterReadingQuery.orgId = orgId;
+
+        const readings = await SensorReading.find(waterReadingQuery).sort({ ts: 1 }).limit(500);
 
         const series = readings.map(r => {
             const hour = r.ts.getHours();

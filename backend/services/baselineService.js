@@ -90,6 +90,61 @@ export const generateProfileForDevice = (type, buildingType = 'hostel', floor = 
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
             3.5, 8.5, 8.5, 8.5, 8.5, 8.5, 8.5
         ];
+    } else if (buildingType === 'hospital_icu') {
+        weekday = [
+            26.5, 26.0, 25.8, 26.0, 26.2, 27.5, 30.0, 32.5, 34.0,
+            33.5, 33.0, 32.5, 32.0, 33.0, 33.5, 33.0, 32.5,
+            31.0, 30.5, 30.0, 29.5, 28.5, 27.5, 27.0
+        ];
+        weekend = [
+            26.0, 25.8, 25.5, 25.8, 26.0, 27.0, 29.5, 31.0, 32.5,
+            32.0, 31.5, 31.0, 31.0, 31.5, 32.0, 31.5, 31.0,
+            30.0, 29.5, 29.0, 28.5, 28.0, 27.0, 26.5
+        ];
+    } else if (buildingType === 'hospital_emergency') {
+        weekday = [
+            18.5, 18.0, 17.5, 17.5, 18.0, 19.5, 22.0, 24.5, 26.0,
+            25.0, 24.5, 24.0, 23.5, 24.5, 25.0, 25.5, 26.5,
+            27.5, 28.0, 27.5, 26.0, 24.0, 21.5, 19.5
+        ];
+        weekend = [
+            19.0, 18.5, 18.0, 18.0, 18.5, 20.0, 23.0, 25.5, 27.0,
+            26.5, 26.0, 25.5, 25.0, 26.0, 26.5, 27.0, 28.0,
+            29.0, 29.5, 29.0, 27.5, 25.5, 23.0, 20.5
+        ];
+    } else if (buildingType === 'hospital_opd') {
+        weekday = [
+            4.5, 4.2, 4.0, 4.0, 4.2, 5.0, 9.5, 18.0, 26.5,
+            28.0, 27.5, 27.0, 24.0, 26.5, 27.0, 26.0, 22.5,
+            16.0, 10.5, 7.5, 6.0, 5.2, 4.8, 4.5
+        ];
+        weekend = [
+            4.2, 4.0, 4.0, 4.0, 4.0, 4.5, 7.0, 13.5, 18.0,
+            19.5, 19.0, 18.5, 15.0, 16.0, 15.5, 14.0, 11.5,
+            8.0, 6.5, 5.5, 5.0, 4.5, 4.2, 4.0
+        ];
+    } else if (buildingType === 'hospital_inpatient') {
+        weekday = [
+            12.5, 12.0, 11.8, 12.0, 12.5, 14.0, 18.5, 21.0, 20.5,
+            18.5, 18.0, 17.5, 18.0, 18.5, 18.0, 18.5, 19.5,
+            21.5, 22.0, 21.5, 19.5, 17.0, 14.5, 13.0
+        ];
+        weekend = [
+            13.0, 12.5, 12.0, 12.0, 12.5, 13.5, 17.0, 19.5, 20.0,
+            19.0, 18.5, 18.0, 18.5, 19.0, 19.0, 19.5, 20.5,
+            22.0, 22.5, 22.0, 20.5, 18.0, 15.0, 13.5
+        ];
+    } else if (buildingType === 'hospital_admin') {
+        weekday = [
+            5.5, 5.2, 5.0, 5.0, 5.2, 6.0, 8.5, 12.0, 15.5,
+            16.5, 16.0, 15.5, 14.0, 15.5, 16.0, 15.0, 13.5,
+            11.0, 9.5, 8.0, 7.0, 6.5, 6.0, 5.8
+        ];
+        weekend = [
+            5.0, 4.8, 4.8, 4.8, 5.0, 5.5, 7.0, 9.5, 11.0,
+            11.5, 11.0, 10.5, 9.5, 10.0, 10.5, 10.0, 9.0,
+            8.0, 7.5, 7.0, 6.5, 6.0, 5.5, 5.2
+        ];
     } else {
         // Default / Library / Administrative / Other
         weekday = [
@@ -145,9 +200,16 @@ export const getExpectedBaseline = (deviceId, hour, isWeekend = false, metric = 
     if (!profile) {
         // Auto-generate profile based on naming convention
         let bType = 'hostel';
-        if (dId.includes('ACAD')) bType = 'academic';
+        if (dId.includes('ACAD') || dId.includes('AB')) bType = 'academic';
         else if (dId.includes('CANT')) bType = 'canteen';
-        else if (dId.includes('LIB')) bType = 'library';
+        else if (dId.includes('LIB') || dId.includes('CL')) bType = 'library';
+        else if (dId.includes('PH')) bType = 'pump_house';
+        else if (dId.includes('SL')) bType = 'street_lighting';
+        else if (dId.includes('ICU')) bType = 'hospital_icu';
+        else if (dId.includes('EMG')) bType = 'hospital_emergency';
+        else if (dId.includes('OPD')) bType = 'hospital_opd';
+        else if (dId.includes('INP')) bType = 'hospital_inpatient';
+        else if (dId.includes('ADMIN')) bType = 'hospital_admin';
 
         const isWater = dId.startsWith('WTR');
         profile = generateProfileForDevice(isWater ? 'water' : 'power', bType, 1);

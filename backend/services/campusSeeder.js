@@ -2,9 +2,11 @@ import Building from '../models/facility/Building.js';
 import Device from '../models/facility/Device.js';
 import SensorReading from '../models/facility/SensorReading.js';
 import Alert from '../models/facility/Alert.js';
+import Facility from '../models/Facility.js';
+import User from '../models/User.js';
 import { getExpectedBaseline } from './baselineService.js';
 
-export const seedCampusHierarchy = async (orgId = 'bput_college', force = false) => {
+export const seedCampusHierarchy = async (orgId = 'bput_college', force = false, facilityTypeOverride = null) => {
     // Check if already seeded (idempotent, only if the org has no buildings)
     const existingBuildings = await Building.countDocuments({ orgId, active: true });
     const existingReadings = await SensorReading.countDocuments({ orgId });
@@ -18,10 +20,107 @@ export const seedCampusHierarchy = async (orgId = 'bput_college', force = false)
         return { skipped: true };
     }
 
-    console.log(`🌱 Seeding EstateIQ Campus Hierarchy (6 buildings, 13 devices, 3 days of normal data) for ${orgId}...`);
+    const isHospital = facilityTypeOverride === 'hospital' || facilityTypeOverride === 'government_hospital' || orgId.includes('hospital');
 
-    // 1. Create the 6 Buildings
-    const buildingsConfig = [
+    console.log(`🌱 Seeding EstateIQ Campus Hierarchy (${isHospital ? 'Hospital' : 'College'}) for ${orgId}...`);
+
+    // 0. Ensure Facility and Demo Admin User exist in database
+    if (isHospital) {
+        await Facility.findOneAndUpdate(
+            { facilityId: orgId },
+            {
+                $set: {
+                    facilityId: orgId,
+                    name: 'Apollo & AIIMS Super-Specialty Hospital',
+                    facilityType: 'government_hospital',
+                    location: {
+                        lat: 20.2961,
+                        lng: 85.8245,
+                        address: 'AIIMS Nagar, Sijua, Patrapada, Bhubaneswar, Odisha',
+                        city: 'Bhubaneswar',
+                        state: 'Odisha'
+                    },
+                    tariffInr: 8.20,
+                    gridEmissionFactor: 0.71,
+                    waterCostPerKl: 22.0,
+                    sustainabilityScore: 84.5
+                }
+            },
+            { upsert: true }
+        );
+
+        let hospUser = await User.findOne({ email: 'director.med@cityhospital.org' });
+        if (!hospUser) {
+            await User.create({
+                name: 'Dr. A. K. Mohapatra',
+                email: 'director.med@cityhospital.org',
+                password: 'demo123',
+                role: 'admin',
+                status: 'active',
+                cityName: 'Bhubaneswar',
+                state: 'Odisha',
+                orgId: 'city_hospital',
+                orgName: 'Apollo & AIIMS Super-Specialty Hospital',
+                orgType: 'hospital'
+            });
+        } else {
+            hospUser.password = 'demo123';
+            hospUser.orgId = 'city_hospital';
+            hospUser.orgName = 'Apollo & AIIMS Super-Specialty Hospital';
+            hospUser.orgType = 'hospital';
+            hospUser.status = 'active';
+            await hospUser.save();
+        }
+    } else {
+        await Facility.findOneAndUpdate(
+            { facilityId: orgId },
+            {
+                $set: {
+                    facilityId: orgId,
+                    name: 'BPUT National Engineering College',
+                    facilityType: 'engineering_college',
+                    location: {
+                        lat: 22.2585,
+                        lng: 84.8480,
+                        address: 'BPUT Campus, Chhend Colony, Rourkela, Odisha',
+                        city: 'Rourkela',
+                        state: 'Odisha'
+                    },
+                    tariffInr: 7.50,
+                    gridEmissionFactor: 0.71,
+                    waterCostPerKl: 18.0,
+                    sustainabilityScore: 78.5
+                }
+            },
+            { upsert: true }
+        );
+
+        let eduUser = await User.findOne({ email: 'dean.admin@bput.ac.in' });
+        if (!eduUser) {
+            await User.create({
+                name: 'Prof. S. K. Nayak',
+                email: 'dean.admin@bput.ac.in',
+                password: 'demo123',
+                role: 'admin',
+                status: 'active',
+                cityName: 'Rourkela',
+                state: 'Odisha',
+                orgId: 'bput_college',
+                orgName: 'BPUT National Engineering College',
+                orgType: 'college'
+            });
+        } else {
+            eduUser.password = 'demo123';
+            eduUser.orgId = 'bput_college';
+            eduUser.orgName = 'BPUT National Engineering College';
+            eduUser.orgType = 'college';
+            eduUser.status = 'active';
+            await eduUser.save();
+        }
+    }
+
+    // 1. Create Buildings
+    const collegeBuildings = [
         { code: 'HA', name: 'Hostel Block A', type: 'hostel', floors: 4 },
         { code: 'HB', name: 'Hostel Block B', type: 'hostel', floors: 3 },
         { code: 'AB', name: 'Academic Block', type: 'academic', floors: 3 },
@@ -29,6 +128,17 @@ export const seedCampusHierarchy = async (orgId = 'bput_college', force = false)
         { code: 'PH', name: 'Pump House', type: 'pump_house', floors: 1 },
         { code: 'SL', name: 'Street Lighting', type: 'street_lighting', floors: 1 }
     ];
+
+    const hospitalBuildings = [
+        { code: 'EMG', name: 'Emergency & Trauma Care', type: 'hospital_emergency', floors: 3 },
+        { code: 'ICU', name: 'ICU & Surgical Critical Block', type: 'hospital_icu', floors: 4 },
+        { code: 'OPD', name: 'OPD & Advanced Diagnostics', type: 'hospital_opd', floors: 4 },
+        { code: 'INP', name: 'Inpatient & Maternity Ward', type: 'hospital_inpatient', floors: 4 },
+        { code: 'ADMIN', name: 'Central Pharmacy & Admin', type: 'hospital_admin', floors: 2 },
+        { code: 'PH', name: 'Medical Gases & Pump Utility', type: 'pump_house', floors: 1 }
+    ];
+
+    const buildingsConfig = isHospital ? hospitalBuildings : collegeBuildings;
 
     const buildingMap = {};
     for (const b of buildingsConfig) {

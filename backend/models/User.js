@@ -20,6 +20,14 @@ const userSchema = new mongoose.Schema({
     district: { type: String, default: '' },
     cityName: { type: String, default: '' },
 
+    orgId: { type: String, default: 'bput_college' },
+    orgName: { type: String, default: '' },
+    orgType: {
+        type: String,
+        enum: ['college', 'hospital', 'industry', 'municipal', 'school', 'other'],
+        default: 'college'
+    },
+
     ecoCoins: { type: Number, default: 0 },
     citizenPoints: { type: Number, default: 0 },  // leaderboard metric for citizens
     penaltyCount: { type: Number, default: 0 },    // number of approved false report penalties
